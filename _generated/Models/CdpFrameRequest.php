@@ -1,0 +1,114 @@
+<?php
+
+namespace GhostCrawl\Models;
+
+use Microsoft\Kiota\Abstractions\Serialization\AdditionalDataHolder;
+use Microsoft\Kiota\Abstractions\Serialization\Parsable;
+use Microsoft\Kiota\Abstractions\Serialization\ParseNode;
+use Microsoft\Kiota\Abstractions\Serialization\SerializationWriter;
+
+class CdpFrameRequest implements AdditionalDataHolder, Parsable 
+{
+    /**
+     * @var array<string, mixed>|null $additionalData Stores additional data not described in the OpenAPI description found when deserializing. Can be used for serialization as well.
+    */
+    private ?array $additionalData = null;
+    
+    /**
+     * @var int|null $quality The quality property
+    */
+    private ?int $quality = null;
+    
+    /**
+     * @var string|null $session_id The session_id property
+    */
+    private ?string $session_id = null;
+    
+    /**
+     * Instantiates a new CdpFrameRequest and sets the default values.
+    */
+    public function __construct() {
+        $this->setAdditionalData([]);
+        $this->setQuality(60);
+    }
+
+    /**
+     * Creates a new instance of the appropriate class based on discriminator value
+     * @param ParseNode $parseNode The parse node to use to read the discriminator value and create the object
+     * @return CdpFrameRequest
+    */
+    public static function createFromDiscriminatorValue(ParseNode $parseNode): CdpFrameRequest {
+        return new CdpFrameRequest();
+    }
+
+    /**
+     * Gets the AdditionalData property value. Stores additional data not described in the OpenAPI description found when deserializing. Can be used for serialization as well.
+     * @return array<string, mixed>|null
+    */
+    public function getAdditionalData(): ?array {
+        return $this->additionalData;
+    }
+
+    /**
+     * The deserialization information for the current model
+     * @return array<string, callable(ParseNode): void>
+    */
+    public function getFieldDeserializers(): array {
+        $o = $this;
+        return  [
+            'quality' => fn(ParseNode $n) => $o->setQuality($n->getIntegerValue()),
+            'session_id' => fn(ParseNode $n) => $o->setSessionId($n->getStringValue()),
+        ];
+    }
+
+    /**
+     * Gets the quality property value. The quality property
+     * @return int|null
+    */
+    public function getQuality(): ?int {
+        return $this->quality;
+    }
+
+    /**
+     * Gets the session_id property value. The session_id property
+     * @return string|null
+    */
+    public function getSessionId(): ?string {
+        return $this->session_id;
+    }
+
+    /**
+     * Serializes information the current object
+     * @param SerializationWriter $writer Serialization writer to use to serialize this model
+    */
+    public function serialize(SerializationWriter $writer): void {
+        $writer->writeIntegerValue('quality', $this->getQuality());
+        $writer->writeStringValue('session_id', $this->getSessionId());
+        $writer->writeAdditionalData($this->getAdditionalData());
+    }
+
+    /**
+     * Sets the AdditionalData property value. Stores additional data not described in the OpenAPI description found when deserializing. Can be used for serialization as well.
+     * @param array<string,mixed> $value Value to set for the AdditionalData property.
+    */
+    public function setAdditionalData(?array $value): void {
+        $this->additionalData = $value;
+    }
+
+    /**
+     * Sets the quality property value. The quality property
+     * @param int|null $value Value to set for the quality property.
+    */
+    public function setQuality(?int $value): void {
+        $this->quality = $value;
+    }
+
+    /**
+     * Sets the session_id property value. The session_id property
+     * @param string|null $value Value to set for the session_id property.
+    */
+    public function setSessionId(?string $value): void {
+        $this->session_id = $value;
+    }
+
+}

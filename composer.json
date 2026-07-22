@@ -1,0 +1,53 @@
+{
+    "name": "ghostcrawl/ghostcrawl",
+    "description": "The official PHP SDK for the GhostCrawl API. Collect web data at scale — scrape, crawl, search, and extract structured data.",
+    "version": "2.3.3",
+    "type": "library",
+    "keywords": ["ghostcrawl", "scraping", "crawler", "web-data", "api-client"],
+    "homepage": "https://ghostcrawl.io",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "GhostCrawl",
+            "email": "support@ghostcrawl.io",
+            "homepage": "https://ghostcrawl.io"
+        }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "ext-json": "*",
+        "microsoft/kiota-abstractions": "^2.0",
+        "microsoft/kiota-http-guzzle": "^2.0",
+        "microsoft/kiota-serialization-json": "^2.0",
+        "microsoft/kiota-serialization-text": "^2.0",
+        "microsoft/kiota-serialization-form": "^2.0",
+        "microsoft/kiota-serialization-multipart": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "GhostCrawl\\": ["src/", "_generated/"]
+        },
+        "classmap": ["src/Errors.php", "src/ErrorCodes.php", "src/GhostCrawlClient.php"],
+        "exclude-from-classmap": ["_generated/GhostCrawlClient.php"]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "GhostCrawl\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "2.2.x-dev"
+        }
+    }
+}
