@@ -13,6 +13,9 @@ Requires PHP 8.1+, `ext-curl`, and `ext-json` (both standard in most PHP distrib
 
 ## Quickstart
 
+`GhostCrawlClient` is the one idiomatic, blocking PHP client — the intended,
+first-class shape (there is deliberately no async twin; see [Concurrency](#concurrency)).
+
 ```php
 <?php
 require 'vendor/autoload.php';
@@ -22,9 +25,11 @@ use GhostCrawl\GhostCrawlClient;
 // Token from constructor or GHOSTCRAWL_API_KEY env var
 $client = new GhostCrawlClient('gck_live_YOUR_KEY');
 
-// Scrape a URL
+// Scrape a URL — returns a typed result. Read it by property OR by ['key']:
 $result = $client->scrape('https://example.com', format: 'markdown');
-echo $result['content'];
+echo $result->content;              // typed property access
+echo $result['content'];            // ['key'] access still works (back-compat)
+echo $result->status_code . PHP_EOL;
 
 // Start a crawl run and wait for it to finish — EVENT-DRIVEN: the server blocks
 // until the run is terminal (completed/failed/cancelled) or the timeout elapses,
@@ -37,9 +42,43 @@ echo "status: " . $run['status'] . PHP_EOL;
 //   $done = $client->crawlRuns->waitForCompletion($run['run_id'], timeout: 600);
 // Or omit wait and get notified via a webhook instead.
 
-// Web search
+// Web search — wait: true (default) blocks until results are ready even on a
+// cold rotation, then returns a typed result:
 $results = $client->search('latest AI research', engine: 'google', limit: 10);
-echo count($results['results']) . " results\n";
+echo count($results->results) . " results\n";   // $results['results'] also works
+
+// Pass wait: false to get the raw job handle back and poll it yourself.
+```
+
+## Concurrency
+
+PHP is blocking-native, so each call blocks until it returns. To run many requests
+at once, drive them with Guzzle's async promises (a dependency the SDK already
+ships) — this is the idiomatic PHP concurrency pattern, not a separate async client:
+
+```php
+<?php
+use GhostCrawl\GhostCrawlClient;
+use GuzzleHttp\Promise\Utils;
+
+$client = new GhostCrawlClient('gck_live_YOUR_KEY');
+$urls = ['https://a.example', 'https://b.example', 'https://c.example'];
+
+// Fan out with promises, then settle them together.
+$promises = [];
+foreach ($urls as $u) {
+    $promises[$u] = Utils::task(fn () => $client->scrape($u));
+}
+foreach (Utils::settle($promises)->wait() as $u => $outcome) {
+    if ($outcome['state'] === 'fulfilled') {
+        echo $u . ': ' . $outcome['value']->status_code . PHP_EOL;
+    }
+}
+
+// Or, simplest of all, batch sequentially — clear and rate-limit-friendly:
+foreach ($urls as $u) {
+    echo $u . ': ' . $client->scrape($u)->status_code . PHP_EOL;
+}
 ```
 
 ## Authentication
@@ -190,6 +229,23 @@ $client = new GhostCrawlClient('gck_live_YOUR_KEY', 'http://localhost:8080');
 | Recordings | `$client->recordings` | list, get, delete |
 | Key-Value Store | `$client->kv` | get, set, delete |
 
+## Account & session persona
+
+`me()` returns your account profile — including `max_concurrency`, the number of
+sessions your plan may run at once. `usage()` reports the current billing window.
+`sessionPersona($sessionId)` returns a running session's customer-safe persona: a
+display-only whitelist of `device_class`, `os_class`, `browser_class`, and `locale`
+(never any raw or internal detail).
+
+```php
+$me = $client->me();
+echo $me['max_concurrency'];                 // concurrent-session ceiling for your plan
+
+$persona = $client->sessionPersona($sessionId);
+echo "{$persona['device_class']} {$persona['os_class']} " .
+     "{$persona['browser_class']} {$persona['locale']}";
+```
+
 ## License
 
-Proprietary — GhostCrawl Software License. See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

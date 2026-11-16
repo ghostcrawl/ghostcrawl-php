@@ -64,7 +64,7 @@ class WithNameItemRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * rename and/or rebind storage_state. The identity_id is IMMUTABLE (changing it would silently change the fingerprint and break multi-accounting coherence). 404 if absent; 409 on rename collision.
+     * rename and/or rebind storage_state. The identity_id is IMMUTABLE (changing it would silently change the browser identity and break multi-accounting coherence). 404 if absent; 409 on rename collision.
      * @param ProfileUpdateRequest $body PUT /v1/profiles/{name} body, rename and/or rebind storage_state.
      * @param WithNameItemRequestBuilderPutRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -117,7 +117,7 @@ class WithNameItemRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * rename and/or rebind storage_state. The identity_id is IMMUTABLE (changing it would silently change the fingerprint and break multi-accounting coherence). 404 if absent; 409 on rename collision.
+     * rename and/or rebind storage_state. The identity_id is IMMUTABLE (changing it would silently change the browser identity and break multi-accounting coherence). 404 if absent; 409 on rename collision.
      * @param ProfileUpdateRequest $body PUT /v1/profiles/{name} body, rename and/or rebind storage_state.
      * @param WithNameItemRequestBuilderPutRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation

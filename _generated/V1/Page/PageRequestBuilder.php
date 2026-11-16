@@ -2,12 +2,17 @@
 
 namespace GhostCrawl\V1\Page;
 
+use GhostCrawl\V1\Page\Arrival\ArrivalRequestBuilder;
+use GhostCrawl\V1\Page\ClosePopups\ClosePopupsRequestBuilder;
 use GhostCrawl\V1\Page\Cookies\CookiesRequestBuilder;
 use GhostCrawl\V1\Page\Dom_snapshot\Dom_snapshotRequestBuilder;
 use GhostCrawl\V1\Page\Download\DownloadRequestBuilder;
 use GhostCrawl\V1\Page\Eval\EvalRequestBuilder;
 use GhostCrawl\V1\Page\Har\HarRequestBuilder;
+use GhostCrawl\V1\Page\Mouse\MouseRequestBuilder;
 use GhostCrawl\V1\Page\Scroll\ScrollRequestBuilder;
+use GhostCrawl\V1\Page\TabVisit\TabVisitRequestBuilder;
+use GhostCrawl\V1\Page\Touch\TouchRequestBuilder;
 use GhostCrawl\V1\Page\Upload\UploadRequestBuilder;
 use GhostCrawl\V1\Page\Wait\WaitRequestBuilder;
 use Microsoft\Kiota\Abstractions\BaseRequestBuilder;
@@ -18,6 +23,20 @@ use Microsoft\Kiota\Abstractions\RequestAdapter;
 */
 class PageRequestBuilder extends BaseRequestBuilder 
 {
+    /**
+     * The arrival property
+    */
+    public function arrival(): ArrivalRequestBuilder {
+        return new ArrivalRequestBuilder($this->pathParameters, $this->requestAdapter);
+    }
+    
+    /**
+     * The closePopups property
+    */
+    public function closePopups(): ClosePopupsRequestBuilder {
+        return new ClosePopupsRequestBuilder($this->pathParameters, $this->requestAdapter);
+    }
+    
     /**
      * The cookies property
     */
@@ -54,10 +73,31 @@ class PageRequestBuilder extends BaseRequestBuilder
     }
     
     /**
+     * The mouse property
+    */
+    public function mouse(): MouseRequestBuilder {
+        return new MouseRequestBuilder($this->pathParameters, $this->requestAdapter);
+    }
+    
+    /**
      * The scroll property
     */
     public function scroll(): ScrollRequestBuilder {
         return new ScrollRequestBuilder($this->pathParameters, $this->requestAdapter);
+    }
+    
+    /**
+     * The tabVisit property
+    */
+    public function tabVisit(): TabVisitRequestBuilder {
+        return new TabVisitRequestBuilder($this->pathParameters, $this->requestAdapter);
+    }
+    
+    /**
+     * The touch property
+    */
+    public function touch(): TouchRequestBuilder {
+        return new TouchRequestBuilder($this->pathParameters, $this->requestAdapter);
     }
     
     /**

@@ -31,7 +31,7 @@ class RunsRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * synthetic run history from last_run_at. Returns a list of run summary objects derived from the schedule's stored last_run_at + last_result_hash. A schedule that has never fired returns an empty list. One that has fired returns a single summary with status='completed'. Status values: 'completed' (ran and produced a hash), 'pending' (never ran). This endpoint allows callers to poll for schedule execution without a separate run-history table, the writes last_run_at on every successful fire.
+     * run history derived from last_run_at. Returns a list of run summary objects derived from the schedule's stored last_run_at + last_result_hash. A schedule that has never fired returns an empty list. One that has fired returns a single summary with status='completed'. Status values: 'completed' (ran and produced a hash), 'pending' (never ran). This endpoint allows callers to poll for schedule execution without a separate run-history table, the writes last_run_at on every successful fire.
      * @param RunsRequestBuilderGetRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
      * @throws Exception
@@ -47,7 +47,7 @@ class RunsRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * synthetic run history from last_run_at. Returns a list of run summary objects derived from the schedule's stored last_run_at + last_result_hash. A schedule that has never fired returns an empty list. One that has fired returns a single summary with status='completed'. Status values: 'completed' (ran and produced a hash), 'pending' (never ran). This endpoint allows callers to poll for schedule execution without a separate run-history table, the writes last_run_at on every successful fire.
+     * run history derived from last_run_at. Returns a list of run summary objects derived from the schedule's stored last_run_at + last_result_hash. A schedule that has never fired returns an empty list. One that has fired returns a single summary with status='completed'. Status values: 'completed' (ran and produced a hash), 'pending' (never ran). This endpoint allows callers to poll for schedule execution without a separate run-history table, the writes last_run_at on every successful fire.
      * @param RunsRequestBuilderGetRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation
     */

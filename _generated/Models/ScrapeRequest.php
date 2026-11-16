@@ -33,7 +33,7 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     private ?int $chunk_tokens = null;
     
     /**
-     * @var ScrapeRequest_engine|null $engine Engine override. 'auto' (default): the identity's fingerprint decides the engine. 'chrome'|'firefox'|'webkit': force that engine, enforced only if coherent with the identity (e.g. iOS identities are always webkit); incoherent picks are rejected, never coerced to a hybrid.
+     * @var ScrapeRequest_engine|null $engine Engine override. 'auto' (default): the identity's browser decides the engine. 'chrome'|'firefox'|'webkit': force that engine, enforced only if coherent with the identity (e.g. iOS identities are always webkit); incoherent picks are rejected, never coerced to a hybrid.
     */
     private ?ScrapeRequest_engine $engine = null;
     
@@ -68,7 +68,7 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     private ?ScrapeRequest_language $language = null;
     
     /**
-     * @var ScrapeRequest_profile|null $profile Named persistent profile (multi-accounting). Resolves to a durable identity_id (→ same deterministic fingerprint) + optional saved storage_state (→ cookies/localStorage) for the calling org. Reuses the exact identity+cookies on every request, with no 30-minute sticky-session expiry. 404 if the named profile does not exist for the org.
+     * @var ScrapeRequest_profile|null $profile Named persistent profile (multi-accounting). Resolves to a durable identity_id (→ the same browser identity every time) + optional saved storage_state (→ cookies/localStorage) for the calling org. Reuses the exact identity+cookies on every request, with no 30-minute sticky-session expiry. 404 if the named profile does not exist for the org.
     */
     private ?ScrapeRequest_profile $profile = null;
     
@@ -175,7 +175,7 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Gets the engine property value. Engine override. 'auto' (default): the identity's fingerprint decides the engine. 'chrome'|'firefox'|'webkit': force that engine, enforced only if coherent with the identity (e.g. iOS identities are always webkit); incoherent picks are rejected, never coerced to a hybrid.
+     * Gets the engine property value. Engine override. 'auto' (default): the identity's browser decides the engine. 'chrome'|'firefox'|'webkit': force that engine, enforced only if coherent with the identity (e.g. iOS identities are always webkit); incoherent picks are rejected, never coerced to a hybrid.
      * @return ScrapeRequest_engine|null
     */
     public function getEngine(): ?ScrapeRequest_engine {
@@ -261,7 +261,7 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Gets the profile property value. Named persistent profile (multi-accounting). Resolves to a durable identity_id (→ same deterministic fingerprint) + optional saved storage_state (→ cookies/localStorage) for the calling org. Reuses the exact identity+cookies on every request, with no 30-minute sticky-session expiry. 404 if the named profile does not exist for the org.
+     * Gets the profile property value. Named persistent profile (multi-accounting). Resolves to a durable identity_id (→ the same browser identity every time) + optional saved storage_state (→ cookies/localStorage) for the calling org. Reuses the exact identity+cookies on every request, with no 30-minute sticky-session expiry. 404 if the named profile does not exist for the org.
      * @return ScrapeRequest_profile|null
     */
     public function getProfile(): ?ScrapeRequest_profile {
@@ -401,7 +401,7 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Sets the engine property value. Engine override. 'auto' (default): the identity's fingerprint decides the engine. 'chrome'|'firefox'|'webkit': force that engine, enforced only if coherent with the identity (e.g. iOS identities are always webkit); incoherent picks are rejected, never coerced to a hybrid.
+     * Sets the engine property value. Engine override. 'auto' (default): the identity's browser decides the engine. 'chrome'|'firefox'|'webkit': force that engine, enforced only if coherent with the identity (e.g. iOS identities are always webkit); incoherent picks are rejected, never coerced to a hybrid.
      * @param ScrapeRequest_engine|null $value Value to set for the engine property.
     */
     public function setEngine(?ScrapeRequest_engine $value): void {
@@ -457,7 +457,7 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Sets the profile property value. Named persistent profile (multi-accounting). Resolves to a durable identity_id (→ same deterministic fingerprint) + optional saved storage_state (→ cookies/localStorage) for the calling org. Reuses the exact identity+cookies on every request, with no 30-minute sticky-session expiry. 404 if the named profile does not exist for the org.
+     * Sets the profile property value. Named persistent profile (multi-accounting). Resolves to a durable identity_id (→ the same browser identity every time) + optional saved storage_state (→ cookies/localStorage) for the calling org. Reuses the exact identity+cookies on every request, with no 30-minute sticky-session expiry. 404 if the named profile does not exist for the org.
      * @param ScrapeRequest_profile|null $value Value to set for the profile property.
     */
     public function setProfile(?ScrapeRequest_profile $value): void {

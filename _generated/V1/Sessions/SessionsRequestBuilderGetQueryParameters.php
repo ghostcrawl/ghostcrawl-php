@@ -3,7 +3,7 @@
 namespace GhostCrawl\V1\Sessions;
 
 /**
- * cursor-paginated listing of active sessions. Sessions created by scrape workers and via the API are unified in the same listing, all sessions for your organisation are visible. Results are strictly; no cross-organisation sessions are returned.
+ * cursor-paginated listing of active sessions. Sessions opened by scrape jobs and via the API are unified in the same listing, all sessions for your organisation are visible. Results are strictly; no cross-organisation sessions are returned.
 */
 class SessionsRequestBuilderGetQueryParameters 
 {

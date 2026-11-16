@@ -20,7 +20,7 @@ class SessionCreateRequest implements AdditionalDataHolder, Parsable
     private ?SessionCreateRequest_engine $engine = null;
     
     /**
-     * @var SessionCreateRequest_profile|null $profile Rehydrates the saved identity bundle for this session, same deterministic fingerprint as /v1/scrape with profile=<name>.
+     * @var SessionCreateRequest_profile|null $profile Named persistent profile. Rehydrates the saved identity bundle for this session, the same browser identity as /v1/scrape with profile=<name>.
     */
     private ?SessionCreateRequest_profile $profile = null;
     
@@ -70,7 +70,7 @@ class SessionCreateRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Gets the profile property value. Rehydrates the saved identity bundle for this session, same deterministic fingerprint as /v1/scrape with profile=<name>.
+     * Gets the profile property value. Named persistent profile. Rehydrates the saved identity bundle for this session, the same browser identity as /v1/scrape with profile=<name>.
      * @return SessionCreateRequest_profile|null
     */
     public function getProfile(): ?SessionCreateRequest_profile {
@@ -104,7 +104,7 @@ class SessionCreateRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Sets the profile property value. Rehydrates the saved identity bundle for this session, same deterministic fingerprint as /v1/scrape with profile=<name>.
+     * Sets the profile property value. Named persistent profile. Rehydrates the saved identity bundle for this session, the same browser identity as /v1/scrape with profile=<name>.
      * @param SessionCreateRequest_profile|null $value Value to set for the profile property.
     */
     public function setProfile(?SessionCreateRequest_profile $value): void {

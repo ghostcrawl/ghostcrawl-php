@@ -32,8 +32,8 @@ try {
     $preview = strlen($content) > 200 ? substr($content, 0, 200) . '...' : $content;
 
     echo 'Status: ' . ($result['status'] ?? 'unknown') . PHP_EOL;
-    // identity_id (Phase 140.4-16 response envelope field) — printed so a caller can
-    // correlate this exact drive to its server-side egress-exit assignment (D-04, phase 177).
+    // identity_id (response envelope field) — printed so a caller can
+    // correlate this exact drive to its server-side egress-exit assignment.
     echo 'identity_id: ' . ($result['identity_id'] ?? 'unknown') . PHP_EOL;
     echo 'Content preview:' . PHP_EOL;
     echo $preview . PHP_EOL;

@@ -31,6 +31,7 @@ final class ErrorCodes
     public const CONFLICT                  = 'conflict';
     public const BYO_PROXY_INVALID         = 'byo_proxy_invalid';
     public const TIER_UNAVAILABLE          = 'tier_unavailable';
+    public const ROUTING_MODE_INCOHERENT_CLAIM_OS = 'routing_mode_incoherent_claim_os';
     public const RATE_LIMITED              = 'rate_limited';
     public const QUOTA_BACKEND_UNAVAILABLE = 'quota_backend_unavailable';
     public const POOL_EXHAUSTED            = 'pool_exhausted';

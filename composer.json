@@ -1,7 +1,7 @@
 {
     "name": "ghostcrawl/ghostcrawl",
     "description": "The official PHP SDK for the GhostCrawl API. Collect web data at scale — scrape, crawl, search, and extract structured data.",
-    "version": "2.3.5",
+    "version": "2.3.7",
     "type": "library",
     "keywords": ["ghostcrawl", "scraping", "crawler", "web-data", "api-client"],
     "homepage": "https://ghostcrawl.io",
@@ -24,6 +24,7 @@
         "microsoft/kiota-serialization-multipart": "^2.0"
     },
     "require-dev": {
+        "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^10.0"
     },
     "autoload": {
@@ -39,7 +40,8 @@
         }
     },
     "scripts": {
-        "test": "phpunit"
+        "test": "phpunit",
+        "stan": "phpstan analyse --no-progress"
     },
     "config": {
         "optimize-autoloader": true,

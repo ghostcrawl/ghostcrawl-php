@@ -36,6 +36,10 @@ use Microsoft\Kiota\Abstractions\Authentication\BaseBearerTokenAuthenticationPro
 use Microsoft\Kiota\Abstractions\Authentication\AccessTokenProvider;
 use Microsoft\Kiota\Abstractions\Authentication\AllowedHostsValidator;
 use Microsoft\Kiota\Http\GuzzleRequestAdapter;
+use Microsoft\Kiota\Http\KiotaClientFactory;
+use Microsoft\Kiota\Http\Middleware\KiotaMiddleware;
+use Microsoft\Kiota\Http\Middleware\UserAgentHandler;
+use Microsoft\Kiota\Http\Middleware\Options\UserAgentHandlerOption;
 use Microsoft\Kiota\Serialization\Form\FormParseNodeFactory;
 use Microsoft\Kiota\Serialization\Form\FormSerializationWriterFactory;
 use Microsoft\Kiota\Serialization\Json\JsonParseNodeFactory;
@@ -67,7 +71,7 @@ final class ErrorMapper
      * (Kiota ApiException, Guzzle HTTP/connection errors) to the appropriate
      * GhostCrawlError subclass keyed on HTTP status.
      *
-     * @param \Http\Promise\Promise $promise
+     * @param \Http\Promise\Promise<mixed> $promise
      * @return mixed The resolved value (StreamInterface, Parsable, array, or null).
      */
     public static function wait(\Http\Promise\Promise $promise): mixed
@@ -151,6 +155,23 @@ final class ErrorMapper
             $code = ErrorCodes::codeForStatus($status);
         }
         $retryable = ErrorCodes::retryable($code);
+
+        // The pinned Kiota runtime frequently drops the response body for a
+        // non-2xx without a spec error-mapping (401/402/429/5xx), folding the
+        // problem+json into getMessage() instead. Recover that embedded JSON so
+        // the typed exception's `body` still carries the server detail /
+        // `retry_after` a caller inspects (parity with the Python/Ruby facades —
+        // 190-08 fix). Never overwrite a body the transport DID preserve.
+        if ($body === '' && $message !== '') {
+            $start = strpos($message, '{');
+            $end   = strrpos($message, '}');
+            if ($start !== false && $end !== false && $end > $start) {
+                $candidate = substr($message, $start, $end - $start + 1);
+                if (is_array(json_decode($candidate, true))) {
+                    $body = $candidate;
+                }
+            }
+        }
 
         return match (true) {
             $status === 401 => new AuthenticationError($msg, $status, $body, $code, $retryable, $requestId),
@@ -257,6 +278,19 @@ final class ErrorMapper
     }
 
     /**
+     * Throw the {@see GhostCrawlError} subclass matching an HTTP status — the
+     * public entry the search-job poll ({@see SearchPoll::pollSearchJob()}) uses
+     * to route a poll-path 4xx/5xx through the SAME typed error hierarchy as the
+     * modeled calls.
+     *
+     * @return never
+     */
+    public static function raiseStatus(int $status, string $message, string $body): void
+    {
+        throw self::forStatus($status, $message, $body);
+    }
+
+    /**
      * Best-effort extraction of a response body string from an ApiException.
      */
     private static function responseBody(ApiException $e): string
@@ -291,7 +325,7 @@ final class StaticTokenProvider implements AccessTokenProvider
      *
      * @param string $url
      * @param array<string, mixed> $additionalAuthenticationContext
-     * @return HttpPromise
+     * @return HttpPromise<string>
      */
     public function getAuthorizationTokenAsync(string $url, array $additionalAuthenticationContext = []): HttpPromise
     {
@@ -336,7 +370,24 @@ class CrawlRunsClient
     public function __construct(
         private readonly V1RequestBuilder $v1,
         private readonly string $baseUrl,
+        private readonly GuzzleRequestAdapter $adapter,
     ) {}
+
+    /**
+     * Resume a paused/interrupted crawl run.
+     * Delegates to POST /v1/crawl-runs/{run_id}/resume through the shared authenticated
+     * adapter (the generated core has no resume builder).
+     *
+     * @return array<string, mixed>
+     */
+    public function resume(string $runId): array
+    {
+        return AdapterRequest::json(
+            $this->adapter,
+            'POST',
+            '/v1/crawl-runs/' . rawurlencode($runId) . '/resume',
+        );
+    }
 
     /**
      * Start a new crawl run from a seed URL.
@@ -345,7 +396,7 @@ class CrawlRunsClient
      * @param string    $url                 Seed URL.
      * @param int       $maxDepth            Maximum crawl depth (default 2).
      * @param int       $maxPages            Maximum pages (default 100).
-     * @param array     $extra               Additional request fields.
+     * @param array<string, mixed> $extra    Additional request fields.
      * @param bool      $raiseOnResultError  Throw a {@see ScrapeError} when the result
      *                                        reports a target-side failure (default true).
      * @param bool      $wait                Start-and-wait: make the START call itself
@@ -524,7 +575,82 @@ class CrawlRunsClient
  */
 final class SessionsClient
 {
-    public function __construct(private readonly V1RequestBuilder $v1) {}
+    public function __construct(
+        private readonly V1RequestBuilder $v1,
+        private readonly GuzzleRequestAdapter $adapter,
+    ) {}
+
+    /**
+     * Pin a session to keep it warm (POST /v1/sessions/{session_id}/pin).
+     *
+     * @return array<string, mixed>
+     */
+    public function pin(string $sessionId): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/sessions/' . rawurlencode($sessionId) . '/pin');
+    }
+
+    /**
+     * Terminate a session immediately (POST /v1/sessions/{session_id}/terminate).
+     *
+     * @return array<string, mixed>
+     */
+    public function terminate(string $sessionId): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/sessions/' . rawurlencode($sessionId) . '/terminate');
+    }
+
+    /**
+     * Take over a live session for interactive control (POST /v1/sessions/{session_id}/takeover).
+     *
+     * @param array<string, mixed> $extra
+     * @return array<string, mixed>
+     */
+    public function takeover(string $sessionId, array $extra = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/sessions/' . rawurlencode($sessionId) . '/takeover', $extra ?: null);
+    }
+
+    /**
+     * Mint a short-lived takeover token (POST /v1/sessions/{session_id}/takeover_token).
+     *
+     * @return array<string, mixed>
+     */
+    public function takeoverToken(string $sessionId): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/sessions/' . rawurlencode($sessionId) . '/takeover_token');
+    }
+
+    /**
+     * Release an interactive takeover back to automation (POST /v1/sessions/{session_id}/takeover_release).
+     *
+     * @return array<string, mixed>
+     */
+    public function takeoverRelease(string $sessionId): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/sessions/' . rawurlencode($sessionId) . '/takeover_release');
+    }
+
+    /**
+     * Start recording a session (POST /v1/sessions/{profile_id}/recording/start).
+     *
+     * @param array<string, mixed> $extra
+     * @return array<string, mixed>
+     */
+    public function recordingStart(string $profileId, array $extra = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/sessions/' . rawurlencode($profileId) . '/recording/start', $extra ?: null);
+    }
+
+    /**
+     * Stop recording a session (POST /v1/sessions/{profile_id}/recording/stop).
+     *
+     * @return array<string, mixed>
+     */
+    public function recordingStop(string $profileId): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/sessions/' . rawurlencode($profileId) . '/recording/stop');
+    }
 
     /**
      * List all active sessions.
@@ -542,12 +668,25 @@ final class SessionsClient
      * Create a new browser session.
      * Delegates to POST /v1/sessions/create via the generated builder.
      *
+     * Two creation modes (pass exactly one — passing both is a server-side
+     * validation error):
+     *   - profile-based: pass $profileName to rehydrate a saved identity profile
+     *     (the org must already own a profile of that name, else the API 404s).
+     *   - engine-based (ad-hoc): omit $profileName and the API opens a fresh
+     *     session on $engine ("chrome"/"firefox"/"webkit"/"auto"; default "auto")
+     *     with no saved profile required — the zero-setup path that works on a
+     *     brand-new key with no profiles.
+     *
+     * @param array<string, mixed> $extra
      * @return array<string, mixed>
      */
-    public function create(string $profileName, array $extra = []): array
+    public function create(?string $profileName = null, ?string $engine = null, array $extra = []): array
     {
         $body = new \GhostCrawl\Models\SessionCreateRequest();
-        $body->setAdditionalData(array_merge(['profile' => $profileName], $extra));
+        $base = $profileName !== null
+            ? ['profile' => $profileName]
+            : ['engine' => $engine ?? 'auto'];
+        $body->setAdditionalData(array_merge($base, $extra));
         $result = ErrorMapper::wait($this->v1->sessions()->create()->post($body));
         return ResponseHelper::toArray($result);
     }
@@ -614,6 +753,7 @@ final class ProfilesClient
      * Create a new profile.
      * Delegates to POST /v1/profiles via the generated ProfilesRequestBuilder.
      *
+     * @param array<string, mixed> $config
      * @return array<string, mixed>
      */
     public function create(string $name, array $config = []): array
@@ -628,6 +768,7 @@ final class ProfilesClient
      * Update a profile.
      * Delegates to PUT /v1/profiles/{name} via the generated builder.
      *
+     * @param array<string, mixed> $config
      * @return array<string, mixed>
      */
     public function update(string $name, array $config): array
@@ -656,7 +797,44 @@ final class ProfilesClient
  */
 final class WebhooksClient
 {
-    public function __construct(private readonly V1RequestBuilder $v1) {}
+    public function __construct(
+        private readonly V1RequestBuilder $v1,
+        private readonly GuzzleRequestAdapter $adapter,
+    ) {}
+
+    /**
+     * List delivery attempts for a webhook (GET /v1/webhooks/{webhook_id}/deliveries).
+     *
+     * @return array<string, mixed>
+     */
+    public function listDeliveries(string $webhookId): array
+    {
+        return AdapterRequest::json($this->adapter, 'GET', '/v1/webhooks/' . rawurlencode($webhookId) . '/deliveries');
+    }
+
+    /**
+     * Alias of {@see listDeliveries()} for the canonical `deliveries` surface name.
+     *
+     * @return array<string, mixed>
+     */
+    public function deliveries(string $webhookId): array
+    {
+        return $this->listDeliveries($webhookId);
+    }
+
+    /**
+     * Retry a failed webhook delivery (POST /v1/webhooks/{webhook_id}/deliveries/{delivery_id}/retry).
+     *
+     * @return array<string, mixed>
+     */
+    public function retryDelivery(string $webhookId, string $deliveryId): array
+    {
+        return AdapterRequest::json(
+            $this->adapter,
+            'POST',
+            '/v1/webhooks/' . rawurlencode($webhookId) . '/deliveries/' . rawurlencode($deliveryId) . '/retry',
+        );
+    }
 
     /**
      * List all webhooks.
@@ -686,6 +864,8 @@ final class WebhooksClient
      * Register a new webhook endpoint.
      * Delegates to POST /v1/webhooks via the generated WebhooksRequestBuilder.
      *
+     * @param list<string>|null    $eventTypes
+     * @param array<string, mixed> $extra
      * @return array<string, mixed>
      */
     public function create(string $url, ?array $eventTypes = null, array $extra = []): array
@@ -761,6 +941,9 @@ final class SchedulesClient
      * Create a new schedule.
      * Delegates to POST /v1/schedules via the generated SchedulesRequestBuilder.
      *
+     * @param array<string, mixed> $task
+     * @param array<string, mixed> $extra
+     * @param array<string, mixed>|null $jobParams
      * @return array<string, mixed>
      */
     public function create(
@@ -840,6 +1023,7 @@ final class DatasetsClient
      * Create a new dataset.
      * Delegates to POST /v1/datasets via the generated DatasetsRequestBuilder.
      *
+     * @param array<string, mixed> $extra
      * @return array<string, mixed>
      */
     public function create(string $name, array $extra = []): array
@@ -878,6 +1062,7 @@ final class DatasetsClient
      * Append rows to a dataset.
      * Delegates to POST /v1/datasets/{name}/rows/append via the generated builder.
      *
+     * @param list<array<string, mixed>> $rows
      * @return array<string, mixed>
      */
     public function append(string $name, array $rows): array
@@ -894,7 +1079,30 @@ final class DatasetsClient
  */
 final class RecordingsClient
 {
-    public function __construct(private readonly V1RequestBuilder $v1) {}
+    public function __construct(
+        private readonly V1RequestBuilder $v1,
+        private readonly GuzzleRequestAdapter $adapter,
+    ) {}
+
+    /**
+     * Live visual-recording sub-client for a session.
+     * Reaches /v1/recordings/{session_id}/visual/{start,stop,frames} + the envelope.
+     */
+    public function visual(string $sessionId): RecordingsVisualClient
+    {
+        return new RecordingsVisualClient($this->adapter, $sessionId);
+    }
+
+    /**
+     * Convenience live-view helper — one snapshot of a session's visual frames
+     * (mirrors {@see RecordingsVisualClient::watch()}).
+     *
+     * @return array<string, mixed>
+     */
+    public function watch(string $sessionId, int $limit = 100): array
+    {
+        return $this->visual($sessionId)->watch($limit);
+    }
 
     /**
      * List all recordings.
@@ -1038,13 +1246,887 @@ final class ResponseHelper
             }
         }
         // Typed Parsable with additionalData only (or serialize() produced nothing).
-        if (method_exists($value, 'getAdditionalData')) {
+        if (is_object($value) && method_exists($value, 'getAdditionalData')) {
             $data = $value->getAdditionalData();
             if (is_array($data)) {
                 return $data;
             }
         }
         return [];
+    }
+}
+
+/**
+ * Shared authenticated-request seam over the canonical Kiota {@see GuzzleRequestAdapter}.
+ *
+ * Routes an ad-hoc JSON request (Bearer token + base URL + branded UA + transport all
+ * come from the SAME adapter the generated V1 builders use) for the customer routes that
+ * have no generated builder — the PHP analog of java's `rawJsonRequest` / ruby's
+ * `json_request!`. Every facade sub-client (cdp/page/downloads/storage-states/visual and
+ * the sessions/webhooks/crawl-runs lifecycle extensions) delegates here rather than opening
+ * a raw HTTP client, satisfying FACADE-PATTERN MANDATORY DELEGATION.
+ *
+ * @internal
+ */
+final class AdapterRequest
+{
+    /**
+     * Issue `$method $path` through the canonical adapter and return the decoded body.
+     *
+     * @param array<string, mixed>|null $body JSON body (omitted for null / GET).
+     * @return array<string, mixed>
+     */
+    public static function json(
+        GuzzleRequestAdapter $adapter,
+        string $method,
+        string $path,
+        ?array $body = null,
+    ): array {
+        $ri = new \Microsoft\Kiota\Abstractions\RequestInformation();
+        $ri->urlTemplate = '{+baseurl}' . $path;
+        $ri->pathParameters = ['baseurl' => $adapter->getBaseUrl()];
+        $ri->httpMethod = $method;
+        $ri->tryAddHeader('Accept', 'application/json');
+        if ($body !== null && $method !== 'GET') {
+            // Attach the exact JSON object as a raw PSR-7 stream (not a Kiota-serialized
+            // scalar, which would double-encode) — the canonical way to carry an arbitrary
+            // JSON body for an unbuilt route while still riding the authenticated adapter.
+            $ri->setStreamContent(
+                \GuzzleHttp\Psr7\Utils::streamFor((string) json_encode($body)),
+                'application/json'
+            );
+        }
+        $result = ErrorMapper::wait(
+            $adapter->sendPrimitiveAsync($ri, \Psr\Http\Message\StreamInterface::class, null)
+        );
+        return ResponseHelper::toArray($result);
+    }
+
+    /**
+     * Append a query string built from non-null params to a path.
+     *
+     * @param array<string, mixed> $params
+     */
+    public static function withQuery(string $path, array $params): string
+    {
+        $filtered = array_filter($params, static fn ($v) => $v !== null);
+        if ($filtered === []) {
+            return $path;
+        }
+        return $path . '?' . http_build_query($filtered);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// First-class low-level sub-clients (cdp/page/downloads/storage-states/visual)
+//
+// Each closes a family of the coverage matrix by exposing every customer route
+// as a first-class method delegating through the shared authenticated adapter
+// (AdapterRequest::json) — no raw HTTP. cdp/* and page/* are first-class customer
+// surface.
+// ---------------------------------------------------------------------------
+
+/**
+ * Low-level CDP primitives for a live session — /v1/cdp.
+ */
+final class CdpClient
+{
+    public function __construct(private readonly GuzzleRequestAdapter $adapter) {}
+
+    /**
+     * Drive a CDP `frame` command against the live page (POST /v1/cdp/frame).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function frame(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/cdp/frame', $params);
+    }
+
+    /**
+     * Navigate / read the live page URL over CDP (POST /v1/cdp/url).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function url(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/cdp/url', $params);
+    }
+
+    /**
+     * Dispatch a CDP `Input` event to the live page (POST /v1/cdp/input).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function input(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/cdp/input', $params);
+    }
+}
+
+/**
+ * High-level page primitives for a live session — /v1/page.
+ */
+final class PageClient
+{
+    public function __construct(private readonly GuzzleRequestAdapter $adapter) {}
+
+    /**
+     * Read cookies from the live page (GET /v1/page/cookies).
+     *
+     * @return array<string, mixed>
+     */
+    public function getCookies(): array
+    {
+        return AdapterRequest::json($this->adapter, 'GET', '/v1/page/cookies');
+    }
+
+    /**
+     * Set cookies on the live page (POST /v1/page/cookies).
+     *
+     * @param list<array<string, mixed>> $cookies
+     * @param array<string, mixed>       $extra
+     * @return array<string, mixed>
+     */
+    public function setCookies(array $cookies, array $extra = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/cookies', array_merge(['cookies' => $cookies], $extra));
+    }
+
+    /**
+     * Delete cookies from the live page (DELETE /v1/page/cookies).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function deleteCookies(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'DELETE', '/v1/page/cookies', $params ?: null);
+    }
+
+    /**
+     * Capture a DOM snapshot of the live page (POST /v1/page/dom_snapshot).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function domSnapshot(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/dom_snapshot', $params);
+    }
+
+    /**
+     * Trigger / capture a file download on the live page (POST /v1/page/download).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function download(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/download', $params);
+    }
+
+    /**
+     * Evaluate an expression in the live page context (POST /v1/page/eval).
+     *
+     * @param array<string, mixed> $extra
+     * @return array<string, mixed>
+     */
+    public function eval(string $expression, array $extra = []): array
+    {
+        // §0.6 facade-drift fix: the API EvalBody field is `script`, NOT `expression`
+        // (the SDK surface contract / page_routes.py EvalBody). The method arg
+        // stays $expression for ergonomics; the wire body must send `script`.
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/eval', array_merge(['script' => $expression], $extra));
+    }
+
+    /**
+     * Capture the live page's network HAR log (POST /v1/page/har).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function har(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/har', $params);
+    }
+
+    /**
+     * Scroll the live page (POST /v1/page/scroll).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function scroll(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/scroll', $params);
+    }
+
+    /**
+     * Attach a file to a file input on the live page (POST /v1/page/upload).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function upload(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/upload', $params);
+    }
+
+    /**
+     * Wait for a condition on the live page (POST /v1/page/wait).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function wait(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/wait', $params);
+    }
+
+    /**
+     * Replay a mouse op-stream on the live page (POST /v1/page/mouse).
+     *
+     * $ops is an ordered list of {"kind":"move|down|up|wheel|dwell", ...} driven natively
+     * on the live page — engine-agnostic.
+     */
+    public function mouse(array $ops, array $extra = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/mouse', array_merge(['ops' => $ops], $extra));
+    }
+
+    /**
+     * Arrive at dest_url through a native link click from source_url (POST /v1/page/arrival).
+     *
+     * The live page's document.referrer, Referer and Sec-Fetch-* are produced natively by
+     * the click (engine-agnostic).
+     */
+    public function arrival(string $destUrl, string $sourceUrl, array $extra = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/arrival', array_merge(['dest_url' => $destUrl, 'source_url' => $sourceUrl], $extra));
+    }
+
+    /**
+     * Open a background tab, read it, and close it (Chrome engine only) (POST /v1/page/tab-visit).
+     */
+    public function tabVisit(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/tab-visit', $params);
+    }
+
+    /**
+     * Dismiss overlay popups on the live page (POST /v1/page/close-popups).
+     */
+    public function closePopups(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/close-popups', $params);
+    }
+
+    /**
+     * Replay a touch op-stream on the live page (POST /v1/page/touch).
+     *
+     * $ops is an ordered list of native tap/gesture ops (engine-agnostic).
+     */
+    public function touch(array $ops, array $extra = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/page/touch', array_merge(['ops' => $ops], $extra));
+    }
+}
+
+/**
+ * Manage captured file downloads — /v1/downloads.
+ */
+final class DownloadsClient
+{
+    public function __construct(private readonly GuzzleRequestAdapter $adapter) {}
+
+    /**
+     * List captured downloads (GET /v1/downloads).
+     *
+     * @return array<string, mixed>
+     */
+    public function list(): array
+    {
+        return AdapterRequest::json($this->adapter, 'GET', '/v1/downloads');
+    }
+
+    /**
+     * Get a single download's metadata (GET /v1/downloads/{download_id}).
+     *
+     * @return array<string, mixed>
+     */
+    public function get(string $downloadId): array
+    {
+        return AdapterRequest::json($this->adapter, 'GET', '/v1/downloads/' . rawurlencode($downloadId));
+    }
+
+    /**
+     * Delete a captured download (DELETE /v1/downloads/{download_id}).
+     *
+     * @return array<string, mixed>
+     */
+    public function delete(string $downloadId): array
+    {
+        return AdapterRequest::json($this->adapter, 'DELETE', '/v1/downloads/' . rawurlencode($downloadId));
+    }
+}
+
+/**
+ * Manage reusable storage states (cookies/localStorage) — /v1/storage-states.
+ *
+ * Exposed as the `$storageStates` sub-client. The legacy top-level
+ * {@see GhostCrawlClient::storageStates()} method (a plain list) is retained for
+ * back-compat alongside this property — PHP keeps property and method namespaces
+ * separate, so both `$client->storageStates` and `$client->storageStates()` work.
+ */
+final class StorageStatesClient
+{
+    public function __construct(private readonly GuzzleRequestAdapter $adapter) {}
+
+    /**
+     * List saved storage states (GET /v1/storage-states).
+     *
+     * @return array<string, mixed>
+     */
+    public function list(): array
+    {
+        return AdapterRequest::json($this->adapter, 'GET', '/v1/storage-states');
+    }
+
+    /**
+     * Attach a storage state to a profile (POST /v1/storage-states/{id_or_name}/attach).
+     *
+     * @return array<string, mixed>
+     */
+    public function attach(string $idOrName, string $profileId): array
+    {
+        return AdapterRequest::json(
+            $this->adapter,
+            'POST',
+            '/v1/storage-states/' . rawurlencode($idOrName) . '/attach',
+            ['profile_id' => $profileId],
+        );
+    }
+
+    /**
+     * Detach the storage state from a profile (POST /v1/storage-states/detach).
+     *
+     * @return array<string, mixed>
+     */
+    public function detach(string $profileId): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', '/v1/storage-states/detach', ['profile_id' => $profileId]);
+    }
+}
+
+/**
+ * Live visual-recording sub-client for a session — /v1/recordings/{session_id}/visual.
+ * Reached via {@see RecordingsClient::visual()}.
+ */
+final class RecordingsVisualClient
+{
+    public function __construct(
+        private readonly GuzzleRequestAdapter $adapter,
+        private readonly string $sessionId,
+    ) {}
+
+    private function base(): string
+    {
+        return '/v1/recordings/' . rawurlencode($this->sessionId) . '/visual';
+    }
+
+    /**
+     * Start a live visual recording (POST .../visual/start).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function start(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', $this->base() . '/start', $params);
+    }
+
+    /**
+     * Stop the live visual recording (POST .../visual/stop).
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
+    public function stop(array $params = []): array
+    {
+        return AdapterRequest::json($this->adapter, 'POST', $this->base() . '/stop', $params);
+    }
+
+    /**
+     * Get the visual recording envelope (GET .../visual).
+     *
+     * @return array<string, mixed>
+     */
+    public function get(): array
+    {
+        return AdapterRequest::json($this->adapter, 'GET', $this->base());
+    }
+
+    /**
+     * List captured visual frames (GET .../visual/frames).
+     *
+     * @return array<string, mixed>
+     */
+    public function frames(int $cursor = 0, int $limit = 100): array
+    {
+        $path = AdapterRequest::withQuery($this->base() . '/frames', ['cursor' => $cursor, 'limit' => $limit]);
+        return AdapterRequest::json($this->adapter, 'GET', $path);
+    }
+
+    /**
+     * Convenience live-view helper: one snapshot of the current visual-frame set.
+     * (The blocking-native PHP client returns the latest frames page rather than an
+     * async stream — drive it in a loop for a continuous view.)
+     *
+     * @return array<string, mixed>
+     */
+    public function watch(int $limit = 100): array
+    {
+        return $this->frames(0, $limit);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Typed-but-array-accessible result models
+//
+// Every scrape/search/crawl response is wrapped in one of these OWNED types so
+// the raw Kiota-generated builders NEVER reach the user surface. Each
+// result implements ArrayAccess + IteratorAggregate (delegating to the decoded
+// response array) so 100% of existing callers that read $result['content'] keep
+// working unchanged — while new code gets discoverable, typed properties named
+// for the EXACT canonical field names.
+//
+// Field names are shared across the GhostCrawl SDKs so results read uniformly.
+// ---------------------------------------------------------------------------
+
+/**
+ * Base typed result — an array-accessible, iterable, JSON-serializable view over
+ * a decoded response array. Subclasses declare the canonical lane field names as
+ * typed public properties, populated from the payload on construction; the raw
+ * array stays reachable by key (and any undeclared/extra server field with it).
+ *
+ * @implements \ArrayAccess<string, mixed>
+ * @implements \IteratorAggregate<string, mixed>
+ */
+abstract class Result implements \ArrayAccess, \IteratorAggregate, \Countable, \JsonSerializable
+{
+    /** @var array<array-key, mixed> */
+    protected array $data;
+
+    /** @param array<string, mixed> $data */
+    public function __construct(array $data = [])
+    {
+        $this->data = $data;
+    }
+
+    /**
+     * The complete decoded response array — the back-compat / undeclared-field door.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return $this->data;
+    }
+
+    // -- ArrayAccess (['key'] back-compat) ---------------------------------
+    public function offsetExists(mixed $offset): bool
+    {
+        return isset($this->data[$offset]);
+    }
+
+    public function offsetGet(mixed $offset): mixed
+    {
+        return $this->data[$offset] ?? null;
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void
+    {
+        if ($offset === null) {
+            $this->data[] = $value;
+        } else {
+            $this->data[$offset] = $value;
+        }
+    }
+
+    public function offsetUnset(mixed $offset): void
+    {
+        unset($this->data[$offset]);
+    }
+
+    // -- IteratorAggregate / Countable / JsonSerializable ------------------
+    /** @return \Iterator<string, mixed> */
+    public function getIterator(): \Iterator
+    {
+        return new \ArrayIterator($this->data);
+    }
+
+    public function count(): int
+    {
+        return count($this->data);
+    }
+
+    /** @return array<string, mixed> */
+    public function jsonSerialize(): array
+    {
+        return $this->data;
+    }
+
+    /**
+     * Read a string field from a payload, or null when absent / non-string.
+     *
+     * @param array<string, mixed> $data
+     */
+    protected static function str(array $data, string $key): ?string
+    {
+        return isset($data[$key]) && is_string($data[$key]) ? $data[$key] : null;
+    }
+
+    /**
+     * Read an int field from a payload (coercing a numeric value), or null.
+     *
+     * @param array<string, mixed> $data
+     */
+    protected static function int(array $data, string $key): ?int
+    {
+        return isset($data[$key]) && is_numeric($data[$key]) ? (int) $data[$key] : null;
+    }
+
+    /**
+     * Read a list/array field from a payload, or null when absent / non-array.
+     *
+     * @param array<string, mixed> $data
+     * @return array<mixed>|null
+     */
+    protected static function arr(array $data, string $key): ?array
+    {
+        return isset($data[$key]) && is_array($data[$key]) ? $data[$key] : null;
+    }
+}
+
+/**
+ * Result of scrape / content — category "scrape". content is the cross-format
+ * alias for the rendered output (markdown/html/text), surfaced on construction.
+ */
+final class ScrapeResult extends Result
+{
+    public readonly ?string $status;
+    public readonly ?string $content;
+    public readonly ?string $markdown;
+    public readonly ?string $html;
+    public readonly ?int $status_code;
+    public readonly ?int $bytes;
+    public readonly ?string $url;
+    public readonly ?string $format;
+    /** @var array<mixed>|null */
+    public readonly ?array $warnings;
+
+    /** @param array<string, mixed> $data */
+    public function __construct(array $data = [])
+    {
+        self::surfaceContent($data);
+        parent::__construct($data);
+        $this->status      = self::str($data, 'status');
+        $this->content     = self::str($data, 'content');
+        $this->markdown    = self::str($data, 'markdown');
+        $this->html        = self::str($data, 'html');
+        $this->status_code = self::int($data, 'status_code');
+        $this->bytes       = self::int($data, 'bytes');
+        $this->url         = self::str($data, 'url');
+        $this->format      = self::str($data, 'format');
+        $this->warnings    = self::arr($data, 'warnings');
+    }
+
+    /**
+     * Mirror the rendered output under the canonical `content` key, in place —
+     * identical semantics to {@see GhostCrawlClient::normalizeScrapeContent()},
+     * so a ScrapeResult built from either scrape shape exposes ->content.
+     *
+     * @param array<string, mixed> $data
+     */
+    private static function surfaceContent(array &$data): void
+    {
+        if (array_key_exists('content', $data)) {
+            return;
+        }
+        $value = null;
+        $fmt = $data['format'] ?? null;
+        if (is_string($fmt) && isset($data[$fmt]) && is_string($data[$fmt])) {
+            $value = $data[$fmt];
+        } else {
+            foreach (['markdown', 'html', 'text'] as $key) {
+                if (isset($data[$key]) && is_string($data[$key])) {
+                    $value = $data[$key];
+                    break;
+                }
+            }
+        }
+        if ($value !== null) {
+            $data['content'] = $value;
+        }
+    }
+}
+
+/**
+ * Result of search / map — category "search".
+ */
+final class SearchResult extends Result
+{
+    public readonly ?string $status;
+    /** @var array<mixed>|null */
+    public readonly ?array $results;
+    public readonly ?string $query;
+
+    /** @param array<string, mixed> $data */
+    public function __construct(array $data = [])
+    {
+        if (!array_key_exists('results', $data) && isset($data['items']) && is_array($data['items'])) {
+            $data['results'] = $data['items'];
+        }
+        // Stable shape: a cold-rotation running handle ({status:"running", job_id,
+        // poll_url,...}) carries no "items"/"results". Guarantee a non-null (empty)
+        // array so $result->results / $result['results'] never surprise the caller.
+        // Last-line safety for ANY construction path (mirrors the Python model fix).
+        if (!isset($data['results']) || !is_array($data['results'])) {
+            $data['results'] = [];
+        }
+        parent::__construct($data);
+        $this->status  = self::str($data, 'status');
+        $this->results = self::arr($data, 'results');
+        $this->query   = self::str($data, 'query');
+    }
+}
+
+/**
+ * A crawl run — category "crawl". Returned by {@see GhostCrawlClient::crawl()}.
+ */
+final class CrawlRun extends Result
+{
+    public readonly ?string $run_id;
+    public readonly ?string $status;
+    /** @var array<mixed>|null */
+    public readonly ?array $results;
+
+    /** @param array<string, mixed> $data */
+    public function __construct(array $data = [])
+    {
+        parent::__construct($data);
+        $this->run_id  = self::str($data, 'run_id');
+        $this->status  = self::str($data, 'status');
+        $this->results = self::arr($data, 'results');
+    }
+}
+
+/**
+ * A single crawled/searched document — category "document".
+ */
+final class Document extends Result
+{
+    public readonly ?string $title;
+    public readonly ?string $url;
+    public readonly ?string $content;
+
+    /** @param array<string, mixed> $data */
+    public function __construct(array $data = [])
+    {
+        parent::__construct($data);
+        $this->title   = self::str($data, 'title');
+        $this->url     = self::str($data, 'url');
+        $this->content = self::str($data, 'content');
+    }
+}
+
+/**
+ * Binary lane result (pdf / screenshot) — category "pdf" / "screenshot".
+ *
+ * The binary methods ({@see GhostCrawlClient::pdf()} / {@see GhostCrawlClient::screenshot()})
+ * return raw bytes (a string) for back-compat; this type names the shared canonical
+ * fields (bytes, content_type) so the binary surface reads uniformly with the other
+ * typed results across the GhostCrawl SDKs.
+ */
+final class BinaryResult extends Result
+{
+    public readonly ?string $bytes;
+    public readonly ?string $content_type;
+
+    /**
+     * @param string      $bytes       Raw binary payload.
+     * @param string|null $contentType Response Content-Type (e.g. application/pdf).
+     */
+    public function __construct(string $bytes = '', ?string $contentType = null)
+    {
+        parent::__construct(['bytes' => $bytes, 'content_type' => $contentType]);
+        $this->bytes        = $bytes;
+        $this->content_type = $contentType;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Search(wait) — SDK-owned bounded client-side poll
+//
+// Unlike crawl — whose GET /v1/crawl-runs/{id}?wait=true&timeout_s=N blocks
+// SERVER-side on a completion event — the search-job contract is a CLIENT poll:
+// POST /v1/search on a cold rotation returns
+//
+//   202 { status: "running", poll_url, deadline, poll_max_seconds, poll_terminal_on_404 }
+//
+// and GET {poll_url} (i.e. /v1/search/jobs/{id}) returns 202 running (with a
+// Retry-After header) until a terminal 200. The SDK owns the loop so the caller
+// writes zero poll code — the same wait DX crawl has, a different mechanism under
+// the hood. Mirrors the Go (search_wait.go), Ruby (SearchPoll) and Python
+// (_search_poll.py) references.
+//
+// The engine is a pure function of an injected `$get` getter (and `$sleeper`), so
+// the poll contract is unit-testable with no network.
+// ---------------------------------------------------------------------------
+
+/**
+ * @internal
+ */
+final class SearchPoll
+{
+    /** Terminal search-job states (mirrors the Go/Ruby/Python terminal set). */
+    public const TERMINAL_STATES = ['completed', 'done', 'failed', 'cancelled', 'error'];
+
+    /** Overall client-side wait budget (seconds) when the server gives no bound. */
+    public const DEFAULT_TIMEOUT = 300;
+
+    /** Inter-poll fallback (seconds) when the server sends no Retry-After. */
+    public const DEFAULT_INTERVAL = 3;
+
+    /**
+     * True when $job is an array carrying a terminal `status`.
+     *
+     * @param array<string, mixed> $job
+     */
+    public static function isTerminal(array $job): bool
+    {
+        $status = $job['status'] ?? null;
+        return is_string($status) && in_array($status, self::TERMINAL_STATES, true);
+    }
+
+    /**
+     * Parse a Retry-After delta-seconds value to a non-negative float, or null
+     * when absent/invalid. (The search-job contract advertises delta-seconds
+     * only, not the HTTP-date form.)
+     */
+    public static function parseRetryAfter(mixed $raw): ?float
+    {
+        if ($raw === null) {
+            return null;
+        }
+        $s = trim((string) $raw);
+        if ($s === '' || !is_numeric($s)) {
+            return null;
+        }
+        $f = (float) $s;
+        return $f >= 0 ? $f : null;
+    }
+
+    /** Resolve a poll_url that may be absolute or base-relative. */
+    public static function resolveUrl(string $baseUrl, string $pollUrl): string
+    {
+        if (str_starts_with($pollUrl, 'http://') || str_starts_with($pollUrl, 'https://')) {
+            return $pollUrl;
+        }
+        return rtrim($baseUrl, '/') . '/' . ltrim($pollUrl, '/');
+    }
+
+    /**
+     * Bounded-poll a cold search job to a terminal result.
+     *
+     * Copies the STRUCTURE of {@see CrawlRunsClient::waitForCompletion()} (deadline
+     * + re-arm loop) but implements the client-poll contract: follows poll_url from
+     * the 202 body, honours Retry-After between polls bounded by poll_max_seconds /
+     * an explicit $timeout / {@see DEFAULT_TIMEOUT}, treats a terminal 200 (or a
+     * terminal-status body) as done, treats 404 as terminal when poll_terminal_on_404
+     * (default true), and returns the latest non-terminal record if the deadline
+     * elapses first. When the job carries no poll_url there is nothing to poll and
+     * the initial body is returned unchanged (warm path).
+     *
+     * @param array<string, mixed> $job          The initial (202) job body.
+     * @param string               $baseUrl      Client base URL (to resolve a relative poll_url).
+     * @param callable(string): array{0:int,1:array<string,mixed>,2:array<string,mixed>} $get
+     *                                            One poll GET → [status, headers, body].
+     * @param int|null             $timeout      Overall client-side wait budget (seconds).
+     * @param float|null           $initialRetry First inter-poll delay (from the 202's Retry-After).
+     * @param callable(float): void|null $sleeper Delay hook (injectable for tests).
+     * @return array<string, mixed> The terminal job body (or the latest non-terminal on timeout).
+     */
+    public static function pollSearchJob(
+        array $job,
+        string $baseUrl,
+        callable $get,
+        ?int $timeout = null,
+        ?float $initialRetry = null,
+        ?callable $sleeper = null,
+    ): array {
+        $pollUrl = $job['poll_url'] ?? null;
+        if (!is_string($pollUrl) || $pollUrl === '') {
+            return $job;
+        }
+
+        $url = self::resolveUrl($baseUrl, $pollUrl);
+        $budget = (float) ($timeout ?? $job['poll_max_seconds'] ?? self::DEFAULT_TIMEOUT);
+        $terminalOn404 = array_key_exists('poll_terminal_on_404', $job)
+            ? (bool) $job['poll_terminal_on_404']
+            : true;
+        $sleeper ??= static function (float $seconds): void {
+            if ($seconds > 0) {
+                usleep((int) ($seconds * 1_000_000));
+            }
+        };
+
+        $deadline = microtime(true) + $budget;
+        $retryAfter = (float) ($initialRetry ?? self::DEFAULT_INTERVAL);
+        $latest = $job;
+
+        while (true) {
+            $remaining = $deadline - microtime(true);
+            if ($remaining <= 0) {
+                return $latest;
+            }
+
+            $delay = min($retryAfter, $remaining);
+            if ($delay > 0) {
+                $sleeper($delay);
+            }
+            if (microtime(true) > $deadline) {
+                return $latest;
+            }
+
+            [$status, $headers, $data] = $get($url);
+
+            if ($status === 404) {
+                if ($terminalOn404) {
+                    ErrorMapper::raiseStatus(404, 'search job not found', (string) json_encode($data));
+                }
+                return $latest;
+            }
+            if ($status >= 400) {
+                ErrorMapper::raiseStatus($status, 'search poll failed', (string) json_encode($data));
+            }
+
+            if ($status === 200 || self::isTerminal($data)) {
+                return $data;
+            }
+
+            if ($data !== []) {
+                $latest = $data;
+            }
+            $ra = self::parseRetryAfter($headers['Retry-After'] ?? $headers['retry-after'] ?? null);
+            if ($ra !== null) {
+                $retryAfter = $ra;
+            }
+        }
     }
 }
 
@@ -1072,24 +2154,57 @@ class GhostCrawlClient
 {
     private const DEFAULT_BASE_URL = 'https://api.ghostcrawl.io';
 
-    private readonly V1RequestBuilder $v1;
-    private readonly GuzzleRequestAdapter $adapter;
-
-    public readonly CrawlRunsClient   $crawlRuns;
-    public readonly SessionsClient    $sessions;
-    public readonly ProfilesClient    $profiles;
-    public readonly WebhooksClient    $webhooks;
-    public readonly SchedulesClient   $schedules;
-    public readonly DatasetsClient    $datasets;
-    public readonly RecordingsClient  $recordings;
-    public readonly KVClient          $kv;
+    /** SDK package version — dev fallback for the branded UA when Composer metadata is absent. */
+    public const VERSION = '2.3.7';
 
     /**
-     * @param string|null $token   API key. Falls back to GHOSTCRAWL_API_KEY env var.
-     * @param string|null $baseUrl Override API base URL. Falls back to GHOSTCRAWL_BASE_URL.
+     * Default overall request timeout (seconds). Guzzle's own default is 0 =
+     * "wait forever", which hangs the caller on a stalled socket or dead proxy;
+     * a finite default is the single most important reliability guard. Matches
+     * the Kiota default the sibling SDKs use.
      */
-    public function __construct(?string $token = null, ?string $baseUrl = null)
-    {
+    public const DEFAULT_TIMEOUT_SECONDS = 100.0;
+
+    /**
+     * Default connection-establishment timeout (seconds) — bounds the TCP/TLS
+     * handshake so an unreachable host fails fast instead of hanging.
+     */
+    public const DEFAULT_CONNECT_TIMEOUT_SECONDS = 10.0;
+
+    private readonly V1RequestBuilder $v1;
+    private readonly GuzzleRequestAdapter $adapter;
+    private readonly string $token;
+    private readonly float $timeout;
+    private readonly float $connectTimeout;
+
+    public readonly CrawlRunsClient     $crawlRuns;
+    public readonly SessionsClient      $sessions;
+    public readonly ProfilesClient      $profiles;
+    public readonly WebhooksClient      $webhooks;
+    public readonly SchedulesClient     $schedules;
+    public readonly DatasetsClient      $datasets;
+    public readonly RecordingsClient    $recordings;
+    public readonly KVClient            $kv;
+    public readonly CdpClient           $cdp;
+    public readonly PageClient          $page;
+    public readonly DownloadsClient     $downloads;
+    public readonly StorageStatesClient $storageStates;
+
+    /**
+     * @param string|null $token          API key. Falls back to GHOSTCRAWL_API_KEY env var.
+     * @param string|null $baseUrl        Override API base URL. Falls back to GHOSTCRAWL_BASE_URL.
+     * @param float|null  $timeout        Overall per-request timeout in seconds. Null uses
+     *                                    {@see DEFAULT_TIMEOUT_SECONDS} (100s). 0 disables the
+     *                                    bound (wait forever) — not recommended.
+     * @param float|null  $connectTimeout Connection-establishment timeout in seconds. Null uses
+     *                                    {@see DEFAULT_CONNECT_TIMEOUT_SECONDS} (10s).
+     */
+    public function __construct(
+        ?string $token = null,
+        ?string $baseUrl = null,
+        ?float $timeout = null,
+        ?float $connectTimeout = null,
+    ) {
         $resolved = $token ?? (getenv('GHOSTCRAWL_API_KEY') ?: null);
         if (empty($resolved)) {
             throw new \InvalidArgumentException(
@@ -1097,6 +2212,10 @@ class GhostCrawlClient
                 . 'Get your key at https://ghostcrawl.io'
             );
         }
+
+        $this->token = $resolved;
+        $this->timeout = $timeout ?? self::DEFAULT_TIMEOUT_SECONDS;
+        $this->connectTimeout = $connectTimeout ?? self::DEFAULT_CONNECT_TIMEOUT_SECONDS;
 
         $envBase    = getenv('GHOSTCRAWL_BASE_URL') ?: null;
         $resolvedBase = rtrim($baseUrl ?? $envBase ?? self::DEFAULT_BASE_URL, '/');
@@ -1106,7 +2225,27 @@ class GhostCrawlClient
         $authProvider = new BaseBearerTokenAuthenticationProvider(
             new StaticTokenProvider($resolved)
         );
-        $adapter = new GuzzleRequestAdapter($authProvider);
+        // Branded User-Agent: register the Kiota UserAgentHandler middleware
+        // with a `ghostcrawl-php/<version>` product token at adapter construction, so every
+        // request the generated builders (and the shared AdapterRequest seam) send carries
+        // `User-Agent: ghostcrawl-php/<version>`. This is Kiota middleware, NOT a hand-rolled
+        // per-request header.
+        $uaOption = new UserAgentHandlerOption();
+        $uaOption->setProductName('ghostcrawl-php');
+        $uaOption->setProductVersion(self::sdkVersion());
+        $handlerStack = KiotaClientFactory::getDefaultHandlerStack();
+        $handlerStack->remove(UserAgentHandler::HANDLER_NAME);
+        $handlerStack->push(KiotaMiddleware::userAgent($uaOption), UserAgentHandler::HANDLER_NAME);
+        // Construct the Guzzle client directly (KiotaClientFactory::createWithMiddleware
+        // takes no config) so we can pin finite connect/read timeouts — Guzzle's default
+        // is 0 = wait forever, which hangs the caller on a stalled socket or dead proxy.
+        $httpClient = new \GuzzleHttp\Client([
+            'handler'                            => $handlerStack,
+            \GuzzleHttp\RequestOptions::CONNECT_TIMEOUT => $this->connectTimeout,
+            \GuzzleHttp\RequestOptions::TIMEOUT         => $this->timeout,
+        ]);
+
+        $adapter = new GuzzleRequestAdapter($authProvider, null, null, $httpClient);
         $adapter->setBaseUrl($resolvedBase);
 
         // Register serializers — mirrors what the generated GhostCrawlClient.__construct does.
@@ -1122,14 +2261,60 @@ class GhostCrawlClient
         $this->adapter = $adapter;
         $this->v1 = new V1RequestBuilder($pathParameters, $adapter);
 
-        $this->crawlRuns  = new CrawlRunsClient($this->v1, $resolvedBase);
-        $this->sessions   = new SessionsClient($this->v1);
-        $this->profiles   = new ProfilesClient($this->v1);
-        $this->webhooks   = new WebhooksClient($this->v1);
-        $this->schedules  = new SchedulesClient($this->v1);
-        $this->datasets   = new DatasetsClient($this->v1);
-        $this->recordings = new RecordingsClient($this->v1);
-        $this->kv         = new KVClient($this->v1);
+        $this->crawlRuns     = new CrawlRunsClient($this->v1, $resolvedBase, $adapter);
+        $this->sessions      = new SessionsClient($this->v1, $adapter);
+        $this->profiles      = new ProfilesClient($this->v1);
+        $this->webhooks      = new WebhooksClient($this->v1, $adapter);
+        $this->schedules     = new SchedulesClient($this->v1);
+        $this->datasets      = new DatasetsClient($this->v1);
+        $this->recordings    = new RecordingsClient($this->v1, $adapter);
+        $this->kv            = new KVClient($this->v1);
+        $this->cdp           = new CdpClient($adapter);
+        $this->page          = new PageClient($adapter);
+        $this->downloads     = new DownloadsClient($adapter);
+        $this->storageStates = new StorageStatesClient($adapter);
+    }
+
+    /**
+     * Resolve the SDK package version for the branded User-Agent.
+     *
+     * Reads the installed Composer version of `ghostcrawl/ghostcrawl` when available,
+     * falling back to the {@see VERSION} literal (kept in lock-step with the product
+     * version by check_version_stamp.sh) in a dev/source checkout.
+     */
+    private static function sdkVersion(): string
+    {
+        if (class_exists(\Composer\InstalledVersions::class)) {
+            try {
+                $v = \Composer\InstalledVersions::getPrettyVersion('ghostcrawl/ghostcrawl');
+                if (is_string($v) && $v !== '') {
+                    return ltrim($v, 'v');
+                }
+            } catch (\Throwable) {
+                // fall through to the literal below
+            }
+        }
+        return self::VERSION;
+    }
+
+    /**
+     * Named-constructor alias for the idiomatic blocking client (). PHP is
+     * blocking-native: this ONE client is the intended, first-class shape — there
+     * is deliberately no async twin. For concurrency, drive several instances (or
+     * calls) with Guzzle async promises / sequential batching (see README).
+     *
+     * @param string|null $token          API key. Falls back to GHOSTCRAWL_API_KEY env var.
+     * @param string|null $baseUrl        Override API base URL. Falls back to GHOSTCRAWL_BASE_URL.
+     * @param float|null  $timeout        Overall per-request timeout in seconds (null = default 100s).
+     * @param float|null  $connectTimeout Connection-establishment timeout in seconds (null = default 10s).
+     */
+    public static function create(
+        ?string $token = null,
+        ?string $baseUrl = null,
+        ?float $timeout = null,
+        ?float $connectTimeout = null,
+    ): self {
+        return new GhostCrawlClient($token, $baseUrl, $timeout, $connectTimeout);
     }
 
     // -------------------------------------------------------------------------
@@ -1144,12 +2329,13 @@ class GhostCrawlClient
      * @param string      $format        Output format: "markdown" (default), "html", "text".
      * @param string      $engine        Browser engine: "auto" (default), "chrome", "firefox", "webkit".
      * @param bool        $javascript    Enable JavaScript rendering (default true).
-     * @param array|null  $extractSchema      JSON Schema for structured extraction.
-     * @param array       $extra              Additional request fields.
+     * @param array<string, mixed>|null $extractSchema JSON Schema for structured extraction.
+     * @param array<string, mixed>      $extra         Additional request fields.
      * @param bool        $raiseOnResultError Throw a {@see ScrapeError} when the
      *                                        result reports a target-side failure
      *                                        (default true).
-     * @return array<string, mixed>
+     * @return ScrapeResult Typed result (array-accessible: $result['content'] and
+     *                       $result->content both work).
      */
     public function scrape(
         string $url,
@@ -1159,7 +2345,7 @@ class GhostCrawlClient
         ?array $extractSchema = null,
         array $extra = [],
         bool $raiseOnResultError = true
-    ): array {
+    ): ScrapeResult {
         $body = new \GhostCrawl\Models\ScrapeRequest();
         $data = array_merge(
             ['url' => $url, 'format' => $format, 'engine' => $engine, 'javascript_enabled' => $javascript],
@@ -1174,7 +2360,7 @@ class GhostCrawlClient
         if ($raiseOnResultError) {
             ErrorMapper::raiseOnResultError($array);
         }
-        return $this->normalizeScrapeContent($array);
+        return new ScrapeResult($this->normalizeScrapeContent($array));
     }
 
     /**
@@ -1221,15 +2407,34 @@ class GhostCrawlClient
      * `X-Provider-Authorization: Bearer <providerKey>` header the backend
      * requires. Without it the API replies 401 search_backend_key_missing.
      *
+     * On a WARM rotation the results come back synchronously (HTTP 200, no poll
+     * handle) and are returned immediately. On a COLD rotation the POST returns a
+     * non-terminal job carrying a `poll_url`; with `$wait = true` (the default,
+     * matching crawl's wait DX) the SDK owns a bounded client-side poll of
+     * /v1/search/jobs/{id} to a terminal result — honouring Retry-After and the
+     * deadline — so the caller writes zero poll code. Pass `$wait = false`
+     * to get the raw job handle back and poll it yourself.
+     *
      * @param string      $query       Search query.
      * @param string      $engine      Search engine: "google" (default), "bing", "duckduckgo".
      * @param int         $limit       Maximum results (default 10).
-     * @param array       $extra       Additional request fields.
+     * @param array<string, mixed> $extra Additional request fields.
      * @param string|null $providerKey BYO search-backend key (sent as X-Provider-Authorization).
-     * @return array<string, mixed>
+     * @param bool        $wait        Block until the cold-rotation job is terminal (default true).
+     * @param int|null    $timeout     Overall client-side wait budget in seconds when $wait
+     *                                  (default: the server's poll_max_seconds, else 300).
+     * @return SearchResult Typed result (array-accessible: $result['results'] and
+     *                       $result->results both work).
      */
-    public function search(string $query, string $engine = 'google', int $limit = 10, array $extra = [], ?string $providerKey = null): array
-    {
+    public function search(
+        string $query,
+        string $engine = 'google',
+        int $limit = 10,
+        array $extra = [],
+        ?string $providerKey = null,
+        bool $wait = true,
+        ?int $timeout = null,
+    ): SearchResult {
         $body = new \GhostCrawl\Models\SearchRequest();
         $body->setAdditionalData(array_merge(['query' => $query, 'engine' => $engine, 'limit' => $limit], $extra));
         $config = null;
@@ -1239,7 +2444,94 @@ class GhostCrawlClient
             );
         }
         $result = ErrorMapper::wait($this->v1->search()->post($body, $config));
-        return ResponseHelper::toArray($result);
+        $job = ResponseHelper::toArray($result);
+
+        // Warm path: results returned synchronously (no cold-rotation poll handle).
+        $pollUrl = $job['poll_url'] ?? null;
+        if (!$wait || !is_string($pollUrl) || $pollUrl === '') {
+            return new SearchResult($this->finalizeSearch($job, $query, $engine));
+        }
+
+        // Cold path: SDK-owned bounded client-side poll to a terminal result.
+        $terminal = SearchPoll::pollSearchJob(
+            $job,
+            $this->adapter->getBaseUrl(),
+            $this->searchPollGetter($providerKey),
+            $timeout,
+        );
+        // A timed-out poll returns the raw running handle (no "query"); finalize
+        // re-injects the caller's query/engine so every search return carries a
+        // STABLE shape (warm 200, wait=false handle, timed-out poll).
+        return new SearchResult($this->finalizeSearch($terminal, $query, $engine));
+    }
+
+    /**
+     * Guarantee a stable `search` result shape: alias `items` -> `results`
+     * (default `[]`), inject the caller's `query` when the payload omits it (only
+     * the SDK knows it — a bare running handle has none), and default `engine`.
+     * Mirrors the Python `_finalize_search` facade helper; {@see SearchResult}
+     * adds the final non-null `results` guarantee.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function finalizeSearch(array $data, string $query, string $engine): array
+    {
+        if (!isset($data['results']) || !is_array($data['results'])) {
+            $data['results'] = (isset($data['items']) && is_array($data['items'])) ? $data['items'] : [];
+        }
+        // isset() is already false for a null value, so an explicit `=== null` here is
+        // dead (phpstan identical.alwaysFalse); the empty-string check is the only extra case.
+        if (!isset($data['query']) || $data['query'] === '') {
+            $data['query'] = $query;
+        }
+        if (!array_key_exists('engine', $data)) {
+            $data['engine'] = $engine;
+        }
+        return $data;
+    }
+
+    /**
+     * Build the one-GET poll getter handed to {@see SearchPoll::pollSearchJob()}.
+     *
+     * Returns a `fn(string $url): array{0:int,1:array,2:array}` = [status, headers,
+     * body] that issues a single poll of /v1/search/jobs/{id} carrying the same
+     * Bearer token (and optional BYO provider key) as the modeled calls. The poll
+     * leg needs the raw HTTP status + Retry-After header — which the generated
+     * body-only builder path does not surface — so it uses a direct Guzzle GET
+     * against the resolved poll_url. This mirrors the Go reference's net/http poll
+     * (search_wait.go) and is the sole, documented departure from the generated
+     * core, isolated to this read-only poll seam.
+     */
+    private function searchPollGetter(?string $providerKey): callable
+    {
+        $token = $this->token;
+        $timeout = $this->timeout;
+        $connectTimeout = $this->connectTimeout;
+        return static function (string $url) use ($token, $providerKey, $timeout, $connectTimeout): array {
+            // Finite timeouts here too — a poll GET against a stalled poll_url must
+            // fail fast rather than hang the wait loop forever (Guzzle default is 0).
+            $client = new \GuzzleHttp\Client([
+                'http_errors'                               => false,
+                \GuzzleHttp\RequestOptions::CONNECT_TIMEOUT => $connectTimeout,
+                \GuzzleHttp\RequestOptions::TIMEOUT         => $timeout,
+            ]);
+            $headers = [
+                'Accept'        => 'application/json',
+                'Authorization' => 'Bearer ' . $token,
+            ];
+            if ($providerKey !== null) {
+                $headers['X-Provider-Authorization'] = 'Bearer ' . $providerKey;
+            }
+            $resp = $client->get($url, ['headers' => $headers]);
+            $status = $resp->getStatusCode();
+            $hdrs = [];
+            foreach ($resp->getHeaders() as $name => $values) {
+                $hdrs[$name] = $values[0] ?? '';
+            }
+            $decoded = json_decode((string) $resp->getBody(), true);
+            return [$status, $hdrs, is_array($decoded) ? $decoded : []];
+        };
     }
 
     /**
@@ -1247,8 +2539,8 @@ class GhostCrawlClient
      * Delegates to POST /v1/extract via the generated ExtractRequestBuilder.
      *
      * @param string $url                 Target URL.
-     * @param array  $schema              JSON Schema describing the shape to extract.
-     * @param array  $extra               Additional request fields.
+     * @param array<string, mixed> $schema JSON Schema describing the shape to extract.
+     * @param array<string, mixed> $extra  Additional request fields.
      * @param bool   $raiseOnResultError  Throw a {@see ScrapeError} when the result
      *                                     reports a target-side failure (default true).
      * @return array<string, mixed>
@@ -1272,12 +2564,13 @@ class GhostCrawlClient
      * @param string $url                 Seed URL.
      * @param int    $maxDepth            Maximum crawl depth (default 2).
      * @param int    $maxPages            Maximum pages (default 100).
-     * @param array  $extra               Additional request fields.
+     * @param array<string, mixed> $extra Additional request fields.
      * @param bool   $raiseOnResultError  Throw a {@see ScrapeError} when the result
      *                                     reports a target-side failure (default true).
-     * @return array<string, mixed>
+     * @return CrawlRun Typed result (array-accessible: $run['run_id'] and
+     *                   $run->run_id both work).
      */
-    public function crawl(string $url, int $maxDepth = 2, int $maxPages = 100, array $extra = [], bool $raiseOnResultError = true): array
+    public function crawl(string $url, int $maxDepth = 2, int $maxPages = 100, array $extra = [], bool $raiseOnResultError = true): CrawlRun
     {
         $body = new \GhostCrawl\Models\DeepCrawlBody();
         $body->setAdditionalData(array_merge(
@@ -1289,7 +2582,7 @@ class GhostCrawlClient
         if ($raiseOnResultError) {
             ErrorMapper::raiseOnResultError($array);
         }
-        return $array;
+        return new CrawlRun($array);
     }
 
     /**
@@ -1297,15 +2590,20 @@ class GhostCrawlClient
      * Delegates to POST /v1/map via the generated MapRequestBuilder.
      *
      * @param string $url   Seed URL.
-     * @param array  $extra Additional request fields.
-     * @return array<string, mixed>
+     * @param array<string, mixed> $extra Additional request fields.
+     * @return SearchResult Typed result (category "search"; array-accessible —
+     *                       $result['results'] and $result->results both work).
      */
-    public function map(string $url, array $extra = []): array
+    public function map(string $url, array $extra = []): SearchResult
     {
         $body = new \GhostCrawl\Models\MapBody();
         $body->setAdditionalData(array_merge(['url' => $url], $extra));
         $result = ErrorMapper::wait($this->v1->map()->post($body));
-        return ResponseHelper::toArray($result);
+        $arr = ResponseHelper::toArray($result);
+        if (!isset($arr['results']) && isset($arr['links']) && is_array($arr['links'])) {
+            $arr['results'] = $arr['links'];
+        }
+        return new SearchResult($arr);
     }
 
     /**
@@ -1395,12 +2693,14 @@ class GhostCrawlClient
      *
      * @param string      $url   Target URL to render.
      * @param array<string, mixed> $extra Additional request fields.
-     * @return array<string, mixed> The rendered-content envelope (top-level content = HTML).
+     * @return ScrapeResult The rendered-content envelope (category "scrape";
+     *                       array-accessible — $result['content'] and $result->content
+     *                       both work).
      */
-    public function content(string $url, array $extra = []): array
+    public function content(string $url, array $extra = []): ScrapeResult
     {
         $body = array_merge(['url' => $url], $extra);
-        return $this->sendJson('POST', '/v1/content', $body);
+        return new ScrapeResult($this->sendJson('POST', '/v1/content', $body));
     }
 
     /**
@@ -1417,6 +2717,79 @@ class GhostCrawlClient
     }
 
     /**
+     * Get the authenticated account (GET /v1/me).
+     * Routed through the canonical Kiota adapter (auth + base URL + branded UA).
+     *
+     * @return array<string, mixed>
+     */
+    public function me(): array
+    {
+        return $this->sendJson('GET', '/v1/me', null);
+    }
+
+    /**
+     * Get the account's cost/usage report — the quota-visibility surface (GET /v1/me/usage).
+     *
+     * @param string|null $period Reporting window: "day" | "week" | "month" (server default when null).
+     * @return array<string, mixed>
+     */
+    public function usage(?string $period = null): array
+    {
+        $path = AdapterRequest::withQuery('/v1/me/usage', ['period' => $period]);
+        return $this->sendJson('GET', $path, null);
+    }
+
+    /**
+     * Get the customer-safe persona for a running session
+     * (GET /v1/me/identities/{session_id}/persona).
+     *
+     * Who a given session is, shaped for display: a whitelist of device_class /
+     * os_class / browser_class / locale only — never a raw user-agent or any
+     * internal detail. Session-scoped, distinct from the account-level me().
+     * An unknown session yields a not-found error.
+     *
+     * @return array<string, mixed>
+     */
+    public function sessionPersona(string $sessionId): array
+    {
+        $path = '/v1/me/identities/' . rawurlencode($sessionId) . '/persona';
+        return $this->sendJson('GET', $path, null);
+    }
+
+    /**
+     * Scrape a batch of URLs in one call (POST /v1/scrape/batch).
+     *
+     * @param list<string>         $urls   Target URLs.
+     * @param array<string, mixed> $params Additional request fields (format, engine, …).
+     * @return array<string, mixed>
+     */
+    public function scrapeBatch(array $urls, array $params = []): array
+    {
+        return $this->sendJson('POST', '/v1/scrape/batch', array_merge(['urls' => $urls], $params));
+    }
+
+    /**
+     * Fetch a search job by id (GET /v1/search/jobs/{job_id}) — the manual poll handle
+     * for a cold-rotation search started with `search(..., wait: false)`.
+     *
+     * @return SearchResult Typed result (array-accessible — $r['results'] and $r->results).
+     */
+    public function searchJob(string $jobId): SearchResult
+    {
+        return new SearchResult($this->sendJson('GET', '/v1/search/jobs/' . rawurlencode($jobId), null));
+    }
+
+    /**
+     * Get the status of a deep crawl run (GET /v1/crawl/deep/{run_id}).
+     *
+     * @return array<string, mixed>
+     */
+    public function crawlStatus(string $runId): array
+    {
+        return $this->sendJson('GET', '/v1/crawl/deep/' . rawurlencode($runId), null);
+    }
+
+    /**
      * Execute an agent task via POST /v1/agent.
      * The agent capability is gated per account; when it is not enabled the API
      * replies 404 not_found — this returns that problem+json body as an array
@@ -1428,9 +2801,9 @@ class GhostCrawlClient
      *
      * @param string|null $instruction Natural-language task instruction.
      * @param string|null $url         Optional starting URL.
-     * @param array|null  $steps       Optional explicit step list.
-     * @param array|null  $task        Optional structured task object.
-     * @param array       $extra       Additional request fields.
+     * @param array<mixed>|null         $steps Optional explicit step list.
+     * @param array<string, mixed>|null $task  Optional structured task object.
+     * @param array<string, mixed>      $extra Additional request fields.
      * @return array<string, mixed>
      */
     public function agent(
