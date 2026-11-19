@@ -32,7 +32,7 @@ class Dom_snapshotRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Return ``page.content`` for the live session, capped at 5 MB. callers retry with finer scope or fall back to /v1/page/eval for selector-rooted extraction.
+     * Return the current HTML of the live session's page, capped at 5 MB. Over the cap the response is ``truncated=True`` with ``dom=None``; retry with a narrower scope or use /v1/page/eval to extract a fragment.
      * @param DomSnapshotBody $body The request body
      * @param Dom_snapshotRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -49,7 +49,7 @@ class Dom_snapshotRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Return ``page.content`` for the live session, capped at 5 MB. callers retry with finer scope or fall back to /v1/page/eval for selector-rooted extraction.
+     * Return the current HTML of the live session's page, capped at 5 MB. Over the cap the response is ``truncated=True`` with ``dom=None``; retry with a narrower scope or use /v1/page/eval to extract a fragment.
      * @param DomSnapshotBody $body The request body
      * @param Dom_snapshotRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation

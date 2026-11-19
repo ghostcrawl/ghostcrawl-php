@@ -45,7 +45,7 @@ class WithDownload_ItemRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * GET /v1/downloads/{id} → the download's signed retrieval link / metadata. we do not confirm existence of another tenant's artifact).
+     * GET /v1/downloads/{id} → the captured artifact bytes (or its metadata). When the capture banked its bytes (the producer path), stream them as an ``application/octet-stream`` attachment so the dashboard's blob download and the SDK both retrieve a real file. Falls back to the metadata JSON for a metadata-only capture. we do not confirm existence of another tenant's artifact).
      * @param WithDownload_ItemRequestBuilderGetRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
      * @throws Exception
@@ -78,7 +78,7 @@ class WithDownload_ItemRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * GET /v1/downloads/{id} → the download's signed retrieval link / metadata. we do not confirm existence of another tenant's artifact).
+     * GET /v1/downloads/{id} → the captured artifact bytes (or its metadata). When the capture banked its bytes (the producer path), stream them as an ``application/octet-stream`` attachment so the dashboard's blob download and the SDK both retrieve a real file. Falls back to the metadata JSON for a metadata-only capture. we do not confirm existence of another tenant's artifact).
      * @param WithDownload_ItemRequestBuilderGetRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation
     */

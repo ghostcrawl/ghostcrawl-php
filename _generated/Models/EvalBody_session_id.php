@@ -9,14 +9,14 @@ use Microsoft\Kiota\Abstractions\Serialization\ParseNodeHelper;
 use Microsoft\Kiota\Abstractions\Serialization\SerializationWriter;
 
 /**
- * Composed type wrapper for classes ProfileUpdateRequest_nameMember1, string
+ * Composed type wrapper for classes EvalBody_session_idMember1, string
 */
-class ProfileUpdateRequest_name implements ComposedTypeWrapper, Parsable 
+class EvalBody_session_id implements ComposedTypeWrapper, Parsable 
 {
     /**
-     * @var ProfileUpdateRequest_nameMember1|null $profileUpdateRequest_nameMember1 Composed type representation for type ProfileUpdateRequest_nameMember1
+     * @var EvalBody_session_idMember1|null $evalBody_session_idMember1 Composed type representation for type EvalBody_session_idMember1
     */
-    private ?ProfileUpdateRequest_nameMember1 $profileUpdateRequest_nameMember1 = null;
+    private ?EvalBody_session_idMember1 $evalBody_session_idMember1 = null;
     
     /**
      * @var string|null $string Composed type representation for type string
@@ -26,16 +26,24 @@ class ProfileUpdateRequest_name implements ComposedTypeWrapper, Parsable
     /**
      * Creates a new instance of the appropriate class based on discriminator value
      * @param ParseNode $parseNode The parse node to use to read the discriminator value and create the object
-     * @return ProfileUpdateRequest_name
+     * @return EvalBody_session_id
     */
-    public static function createFromDiscriminatorValue(ParseNode $parseNode): ProfileUpdateRequest_name {
-        $result = new ProfileUpdateRequest_name();
+    public static function createFromDiscriminatorValue(ParseNode $parseNode): EvalBody_session_id {
+        $result = new EvalBody_session_id();
         if ($parseNode->getStringValue() !== null) {
             $result->setString($parseNode->getStringValue());
         } else {
-            $result->setProfileUpdateRequestNameMember1(new ProfileUpdateRequest_nameMember1());
+            $result->setEvalBodySessionIdMember1(new EvalBody_session_idMember1());
         }
         return $result;
+    }
+
+    /**
+     * Gets the EvalBody_session_idMember1 property value. Composed type representation for type EvalBody_session_idMember1
+     * @return EvalBody_session_idMember1|null
+    */
+    public function getEvalBodySessionIdMember1(): ?EvalBody_session_idMember1 {
+        return $this->evalBody_session_idMember1;
     }
 
     /**
@@ -43,18 +51,10 @@ class ProfileUpdateRequest_name implements ComposedTypeWrapper, Parsable
      * @return array<string, callable(ParseNode): void>
     */
     public function getFieldDeserializers(): array {
-        if ($this->getProfileUpdateRequestNameMember1() !== null) {
-            return ParseNodeHelper::mergeDeserializersForIntersectionWrapper($this->getProfileUpdateRequestNameMember1());
+        if ($this->getEvalBodySessionIdMember1() !== null) {
+            return ParseNodeHelper::mergeDeserializersForIntersectionWrapper($this->getEvalBodySessionIdMember1());
         }
         return [];
-    }
-
-    /**
-     * Gets the ProfileUpdateRequest_nameMember1 property value. Composed type representation for type ProfileUpdateRequest_nameMember1
-     * @return ProfileUpdateRequest_nameMember1|null
-    */
-    public function getProfileUpdateRequestNameMember1(): ?ProfileUpdateRequest_nameMember1 {
-        return $this->profileUpdateRequest_nameMember1;
     }
 
     /**
@@ -73,16 +73,16 @@ class ProfileUpdateRequest_name implements ComposedTypeWrapper, Parsable
         if ($this->getString() !== null) {
             $writer->writeStringValue(null, $this->getString());
         } else {
-            $writer->writeObjectValue(null, $this->getProfileUpdateRequestNameMember1());
+            $writer->writeObjectValue(null, $this->getEvalBodySessionIdMember1());
         }
     }
 
     /**
-     * Sets the ProfileUpdateRequest_nameMember1 property value. Composed type representation for type ProfileUpdateRequest_nameMember1
-     * @param ProfileUpdateRequest_nameMember1|null $value Value to set for the ProfileUpdateRequest_nameMember1 property.
+     * Sets the EvalBody_session_idMember1 property value. Composed type representation for type EvalBody_session_idMember1
+     * @param EvalBody_session_idMember1|null $value Value to set for the EvalBody_session_idMember1 property.
     */
-    public function setProfileUpdateRequestNameMember1(?ProfileUpdateRequest_nameMember1 $value): void {
-        $this->profileUpdateRequest_nameMember1 = $value;
+    public function setEvalBodySessionIdMember1(?EvalBody_session_idMember1 $value): void {
+        $this->evalBody_session_idMember1 = $value;
     }
 
     /**

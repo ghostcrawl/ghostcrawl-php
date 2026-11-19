@@ -3,7 +3,6 @@
 namespace GhostCrawl\V1\Recordings\Item\Visual;
 
 use Exception;
-use GhostCrawl\Models\AuthContext;
 use GhostCrawl\Models\ProblemDetails;
 use GhostCrawl\V1\Recordings\Item\Visual\Frames\FramesRequestBuilder;
 use GhostCrawl\V1\Recordings\Item\Visual\Start\StartRequestBuilder;
@@ -57,13 +56,12 @@ class VisualRequestBuilder extends BaseRequestBuilder
 
     /**
      * Get the HLS-style manifest pointer for a visual recording. Returns 200 {manifest_url, frame_count, status, engine} or 404 for
-     * @param AuthContext $body The request body
      * @param VisualRequestBuilderGetRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
      * @throws Exception
     */
-    public function get(AuthContext $body, ?VisualRequestBuilderGetRequestConfiguration $requestConfiguration = null): Promise {
-        $requestInfo = $this->toGetRequestInformation($body, $requestConfiguration);
+    public function get(?VisualRequestBuilderGetRequestConfiguration $requestConfiguration = null): Promise {
+        $requestInfo = $this->toGetRequestInformation($requestConfiguration);
         $errorMappings = [
                 '422' => [ProblemDetails::class, 'createFromDiscriminatorValue'],
         ];
@@ -74,11 +72,10 @@ class VisualRequestBuilder extends BaseRequestBuilder
 
     /**
      * Get the HLS-style manifest pointer for a visual recording. Returns 200 {manifest_url, frame_count, status, engine} or 404 for
-     * @param AuthContext $body The request body
      * @param VisualRequestBuilderGetRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation
     */
-    public function toGetRequestInformation(AuthContext $body, ?VisualRequestBuilderGetRequestConfiguration $requestConfiguration = null): RequestInformation {
+    public function toGetRequestInformation(?VisualRequestBuilderGetRequestConfiguration $requestConfiguration = null): RequestInformation {
         $requestInfo = new RequestInformation();
         $requestInfo->urlTemplate = $this->urlTemplate;
         $requestInfo->pathParameters = $this->pathParameters;
@@ -88,7 +85,6 @@ class VisualRequestBuilder extends BaseRequestBuilder
             $requestInfo->addRequestOptions(...$requestConfiguration->options);
         }
         $requestInfo->tryAddHeader('Accept', "application/json");
-        $requestInfo->setContentFromParsable($this->requestAdapter, "application/json", $body);
         return $requestInfo;
     }
 

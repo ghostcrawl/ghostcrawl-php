@@ -3,7 +3,6 @@
 namespace GhostCrawl\V1\Recordings\Item\Visual\Frames;
 
 use Exception;
-use GhostCrawl\Models\AuthContext;
 use GhostCrawl\Models\ProblemDetails;
 use Http\Promise\Promise;
 use Microsoft\Kiota\Abstractions\BaseRequestBuilder;
@@ -33,13 +32,12 @@ class FramesRequestBuilder extends BaseRequestBuilder
 
     /**
      * List paginated frame references for frame-by-frame replay. next_cursor == -1 means no more pages.
-     * @param AuthContext $body The request body
      * @param FramesRequestBuilderGetRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
      * @throws Exception
     */
-    public function get(AuthContext $body, ?FramesRequestBuilderGetRequestConfiguration $requestConfiguration = null): Promise {
-        $requestInfo = $this->toGetRequestInformation($body, $requestConfiguration);
+    public function get(?FramesRequestBuilderGetRequestConfiguration $requestConfiguration = null): Promise {
+        $requestInfo = $this->toGetRequestInformation($requestConfiguration);
         $errorMappings = [
                 '422' => [ProblemDetails::class, 'createFromDiscriminatorValue'],
         ];
@@ -50,11 +48,10 @@ class FramesRequestBuilder extends BaseRequestBuilder
 
     /**
      * List paginated frame references for frame-by-frame replay. next_cursor == -1 means no more pages.
-     * @param AuthContext $body The request body
      * @param FramesRequestBuilderGetRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation
     */
-    public function toGetRequestInformation(AuthContext $body, ?FramesRequestBuilderGetRequestConfiguration $requestConfiguration = null): RequestInformation {
+    public function toGetRequestInformation(?FramesRequestBuilderGetRequestConfiguration $requestConfiguration = null): RequestInformation {
         $requestInfo = new RequestInformation();
         $requestInfo->urlTemplate = $this->urlTemplate;
         $requestInfo->pathParameters = $this->pathParameters;
@@ -67,7 +64,6 @@ class FramesRequestBuilder extends BaseRequestBuilder
             $requestInfo->addRequestOptions(...$requestConfiguration->options);
         }
         $requestInfo->tryAddHeader('Accept', "application/json");
-        $requestInfo->setContentFromParsable($this->requestAdapter, "application/json", $body);
         return $requestInfo;
     }
 

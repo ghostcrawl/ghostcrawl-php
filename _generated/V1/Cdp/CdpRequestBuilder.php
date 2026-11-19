@@ -3,6 +3,7 @@
 namespace GhostCrawl\V1\Cdp;
 
 use GhostCrawl\V1\Cdp\Frame\FrameRequestBuilder;
+use GhostCrawl\V1\Cdp\Input\InputRequestBuilder;
 use GhostCrawl\V1\Cdp\Url\UrlRequestBuilder;
 use Microsoft\Kiota\Abstractions\BaseRequestBuilder;
 use Microsoft\Kiota\Abstractions\RequestAdapter;
@@ -17,6 +18,13 @@ class CdpRequestBuilder extends BaseRequestBuilder
     */
     public function frame(): FrameRequestBuilder {
         return new FrameRequestBuilder($this->pathParameters, $this->requestAdapter);
+    }
+    
+    /**
+     * The input property
+    */
+    public function input(): InputRequestBuilder {
+        return new InputRequestBuilder($this->pathParameters, $this->requestAdapter);
     }
     
     /**

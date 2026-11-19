@@ -25,9 +25,14 @@ class ScrollBody implements AdditionalDataHolder, Parsable
     private ?ScrollBody_distance_px $distance_px = null;
     
     /**
-     * @var string|null $profile_id The profile_id property
+     * @var ScrollBody_dy|null $dy The dy property
     */
-    private ?string $profile_id = null;
+    private ?ScrollBody_dy $dy = null;
+    
+    /**
+     * @var ScrollBody_profile_id|null $profile_id The profile_id property
+    */
+    private ?ScrollBody_profile_id $profile_id = null;
     
     /**
      * @var ScrollBody_selector|null $selector The selector property
@@ -35,10 +40,16 @@ class ScrollBody implements AdditionalDataHolder, Parsable
     private ?ScrollBody_selector $selector = null;
     
     /**
+     * @var ScrollBody_session_id|null $session_id The session_id property
+    */
+    private ?ScrollBody_session_id $session_id = null;
+    
+    /**
      * Instantiates a new ScrollBody and sets the default values.
     */
     public function __construct() {
         $this->setAdditionalData([]);
+        $this->setDirection(new ScrollBody_direction('down'));
     }
 
     /**
@@ -75,6 +86,14 @@ class ScrollBody implements AdditionalDataHolder, Parsable
     }
 
     /**
+     * Gets the dy property value. The dy property
+     * @return ScrollBody_dy|null
+    */
+    public function getDy(): ?ScrollBody_dy {
+        return $this->dy;
+    }
+
+    /**
      * The deserialization information for the current model
      * @return array<string, callable(ParseNode): void>
     */
@@ -83,16 +102,18 @@ class ScrollBody implements AdditionalDataHolder, Parsable
         return  [
             'direction' => fn(ParseNode $n) => $o->setDirection($n->getEnumValue(ScrollBody_direction::class)),
             'distance_px' => fn(ParseNode $n) => $o->setDistancePx($n->getObjectValue([ScrollBody_distance_px::class, 'createFromDiscriminatorValue'])),
-            'profile_id' => fn(ParseNode $n) => $o->setProfileId($n->getStringValue()),
+            'dy' => fn(ParseNode $n) => $o->setDy($n->getObjectValue([ScrollBody_dy::class, 'createFromDiscriminatorValue'])),
+            'profile_id' => fn(ParseNode $n) => $o->setProfileId($n->getObjectValue([ScrollBody_profile_id::class, 'createFromDiscriminatorValue'])),
             'selector' => fn(ParseNode $n) => $o->setSelector($n->getObjectValue([ScrollBody_selector::class, 'createFromDiscriminatorValue'])),
+            'session_id' => fn(ParseNode $n) => $o->setSessionId($n->getObjectValue([ScrollBody_session_id::class, 'createFromDiscriminatorValue'])),
         ];
     }
 
     /**
      * Gets the profile_id property value. The profile_id property
-     * @return string|null
+     * @return ScrollBody_profile_id|null
     */
-    public function getProfileId(): ?string {
+    public function getProfileId(): ?ScrollBody_profile_id {
         return $this->profile_id;
     }
 
@@ -105,14 +126,24 @@ class ScrollBody implements AdditionalDataHolder, Parsable
     }
 
     /**
+     * Gets the session_id property value. The session_id property
+     * @return ScrollBody_session_id|null
+    */
+    public function getSessionId(): ?ScrollBody_session_id {
+        return $this->session_id;
+    }
+
+    /**
      * Serializes information the current object
      * @param SerializationWriter $writer Serialization writer to use to serialize this model
     */
     public function serialize(SerializationWriter $writer): void {
         $writer->writeEnumValue('direction', $this->getDirection());
         $writer->writeObjectValue('distance_px', $this->getDistancePx());
-        $writer->writeStringValue('profile_id', $this->getProfileId());
+        $writer->writeObjectValue('dy', $this->getDy());
+        $writer->writeObjectValue('profile_id', $this->getProfileId());
         $writer->writeObjectValue('selector', $this->getSelector());
+        $writer->writeObjectValue('session_id', $this->getSessionId());
         $writer->writeAdditionalData($this->getAdditionalData());
     }
 
@@ -141,10 +172,18 @@ class ScrollBody implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Sets the profile_id property value. The profile_id property
-     * @param string|null $value Value to set for the profile_id property.
+     * Sets the dy property value. The dy property
+     * @param ScrollBody_dy|null $value Value to set for the dy property.
     */
-    public function setProfileId(?string $value): void {
+    public function setDy(?ScrollBody_dy $value): void {
+        $this->dy = $value;
+    }
+
+    /**
+     * Sets the profile_id property value. The profile_id property
+     * @param ScrollBody_profile_id|null $value Value to set for the profile_id property.
+    */
+    public function setProfileId(?ScrollBody_profile_id $value): void {
         $this->profile_id = $value;
     }
 
@@ -154,6 +193,14 @@ class ScrollBody implements AdditionalDataHolder, Parsable
     */
     public function setSelector(?ScrollBody_selector $value): void {
         $this->selector = $value;
+    }
+
+    /**
+     * Sets the session_id property value. The session_id property
+     * @param ScrollBody_session_id|null $value Value to set for the session_id property.
+    */
+    public function setSessionId(?ScrollBody_session_id $value): void {
+        $this->session_id = $value;
     }
 
 }

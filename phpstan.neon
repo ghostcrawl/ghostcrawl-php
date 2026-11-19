@@ -1,0 +1,9 @@
+parameters:
+    level: 8
+    paths:
+        - src
+    # The Kiota-generated core under _generated/ is machine-emitted and is not
+    # hand-maintained SDK source; it is excluded from static analysis (the facade
+    # in src/ is the hand-written surface the check is meant to guard).
+    excludePaths:
+        - _generated

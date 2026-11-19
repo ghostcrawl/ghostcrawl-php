@@ -3,7 +3,6 @@
 namespace GhostCrawl\V1\Recordings\Item\Visual\Start;
 
 use Exception;
-use GhostCrawl\Models\AuthContext;
 use GhostCrawl\Models\ProblemDetails;
 use Http\Promise\Promise;
 use Microsoft\Kiota\Abstractions\BaseRequestBuilder;
@@ -33,13 +32,12 @@ class StartRequestBuilder extends BaseRequestBuilder
 
     /**
      * Start a visual recording for a live session. Creates a session_recordings row. Returns 201 with the recording row id. Security gates (in order): 1. 2. 3. ownership gate: session ownership verified
-     * @param AuthContext $body The request body
      * @param StartRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
      * @throws Exception
     */
-    public function post(AuthContext $body, ?StartRequestBuilderPostRequestConfiguration $requestConfiguration = null): Promise {
-        $requestInfo = $this->toPostRequestInformation($body, $requestConfiguration);
+    public function post(?StartRequestBuilderPostRequestConfiguration $requestConfiguration = null): Promise {
+        $requestInfo = $this->toPostRequestInformation($requestConfiguration);
         $errorMappings = [
                 '422' => [ProblemDetails::class, 'createFromDiscriminatorValue'],
         ];
@@ -50,11 +48,10 @@ class StartRequestBuilder extends BaseRequestBuilder
 
     /**
      * Start a visual recording for a live session. Creates a session_recordings row. Returns 201 with the recording row id. Security gates (in order): 1. 2. 3. ownership gate: session ownership verified
-     * @param AuthContext $body The request body
      * @param StartRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation
     */
-    public function toPostRequestInformation(AuthContext $body, ?StartRequestBuilderPostRequestConfiguration $requestConfiguration = null): RequestInformation {
+    public function toPostRequestInformation(?StartRequestBuilderPostRequestConfiguration $requestConfiguration = null): RequestInformation {
         $requestInfo = new RequestInformation();
         $requestInfo->urlTemplate = $this->urlTemplate;
         $requestInfo->pathParameters = $this->pathParameters;
@@ -64,7 +61,6 @@ class StartRequestBuilder extends BaseRequestBuilder
             $requestInfo->addRequestOptions(...$requestConfiguration->options);
         }
         $requestInfo->tryAddHeader('Accept', "application/json");
-        $requestInfo->setContentFromParsable($this->requestAdapter, "application/json", $body);
         return $requestInfo;
     }
 

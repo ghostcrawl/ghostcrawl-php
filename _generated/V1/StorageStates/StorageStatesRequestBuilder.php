@@ -67,7 +67,7 @@ class StorageStatesRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * snapshot browser storage state from a live session. Captures the current cookies, localStorage, and session storage from the named active profile and saves it encrypted under the given name. Returns storage state metadata on success (credentials are never returned). Storage blobs over 5 MB return storage_state_too_large (400).
+     * snapshot browser storage state from a live session. Captures the current cookies, localStorage, and session storage from the named active profile and saves it encrypted under the given name. Returns storage state metadata on success (credentials are never returned). Storage blobs over 5 MB return storage_state_too_large (400). Pass ``session_id`` to capture from a live cloud session; on a self-hosted deployment ``profile_id`` alone captures from the local active page.
      * @param StorageStatesPostRequestBody $body The request body
      * @param StorageStatesRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -105,7 +105,7 @@ class StorageStatesRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * snapshot browser storage state from a live session. Captures the current cookies, localStorage, and session storage from the named active profile and saves it encrypted under the given name. Returns storage state metadata on success (credentials are never returned). Storage blobs over 5 MB return storage_state_too_large (400).
+     * snapshot browser storage state from a live session. Captures the current cookies, localStorage, and session storage from the named active profile and saves it encrypted under the given name. Returns storage state metadata on success (credentials are never returned). Storage blobs over 5 MB return storage_state_too_large (400). Pass ``session_id`` to capture from a live cloud session; on a self-hosted deployment ``profile_id`` alone captures from the local active page.
      * @param StorageStatesPostRequestBody $body The request body
      * @param StorageStatesRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation

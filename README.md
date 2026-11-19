@@ -5,11 +5,21 @@ Collect web data at scale — scrape, crawl, search, and extract structured data
 
 ## Install
 
+The current release is **2.3.8** (`ghostcrawl/ghostcrawl:2.3.8`):
+
 ```bash
-composer require ghostcrawl/ghostcrawl
+composer require ghostcrawl/ghostcrawl:2.3.8
 ```
 
 Requires PHP 8.1+, `ext-curl`, and `ext-json` (both standard in most PHP distributions).
+
+### First step: runtime setup
+
+The client talks to the GhostCrawl API (hosted cloud or your own machine). To run
+it locally, use the single unified terminal-install path — Docker, the three
+browser engines and your API key — documented at
+**https://docs.ghostcrawl.io/self-host**. One launcher covers Linux, macOS and
+Windows; no per-SDK installer is needed.
 
 ## Quickstart
 

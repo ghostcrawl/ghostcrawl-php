@@ -32,7 +32,7 @@ class AgentRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Start agent lane request
+     * BETA / opt-in. The REST agent lane is disabled by default and returns 404 until enabled for your account/deployment, see the 404 response below. The agent capability is generally available via the MCP `ghostcrawl_agent` tool; this REST surface is still stabilising. Contact support to enable it.
      * @param AgentRequest $body The request body
      * @param AgentRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -51,7 +51,7 @@ class AgentRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Start agent lane request
+     * BETA / opt-in. The REST agent lane is disabled by default and returns 404 until enabled for your account/deployment, see the 404 response below. The agent capability is generally available via the MCP `ghostcrawl_agent` tool; this REST surface is still stabilising. Contact support to enable it.
      * @param AgentRequest $body The request body
      * @param AgentRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation

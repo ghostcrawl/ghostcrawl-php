@@ -28,6 +28,11 @@ class ContentRequest implements AdditionalDataHolder, Parsable
     private ?ContentRequest_format $format = null;
     
     /**
+     * @var bool|null $geo_force Bypass geo-coherence: claim identity_country's geo (timezone + geolocation) REGARDLESS of the exit IP. Requires a pinned identity_country + geo_select tier. Default off (geo follows the exit; forcing may create an IP<->timezone mismatch).
+    */
+    private ?bool $geo_force = null;
+    
+    /**
      * @var ContentRequest_identity|null $identity Re-use a persisted identity.
     */
     private ?ContentRequest_identity $identity = null;
@@ -64,6 +69,7 @@ class ContentRequest implements AdditionalDataHolder, Parsable
         $this->setAdditionalData([]);
         $this->setEngine(new ContentRequest_engine('auto'));
         $this->setFormat(new ContentRequest_format('html'));
+        $this->setGeoForce(false);
     }
 
     /**
@@ -100,6 +106,7 @@ class ContentRequest implements AdditionalDataHolder, Parsable
         return  [
             'engine' => fn(ParseNode $n) => $o->setEngine($n->getEnumValue(ContentRequest_engine::class)),
             'format' => fn(ParseNode $n) => $o->setFormat($n->getEnumValue(ContentRequest_format::class)),
+            'geo_force' => fn(ParseNode $n) => $o->setGeoForce($n->getBooleanValue()),
             'identity' => fn(ParseNode $n) => $o->setIdentity($n->getObjectValue([ContentRequest_identity::class, 'createFromDiscriminatorValue'])),
             'identity_country' => fn(ParseNode $n) => $o->setIdentityCountry($n->getObjectValue([ContentRequest_identity_country::class, 'createFromDiscriminatorValue'])),
             'language' => fn(ParseNode $n) => $o->setLanguage($n->getObjectValue([ContentRequest_language::class, 'createFromDiscriminatorValue'])),
@@ -115,6 +122,14 @@ class ContentRequest implements AdditionalDataHolder, Parsable
     */
     public function getFormat(): ?ContentRequest_format {
         return $this->format;
+    }
+
+    /**
+     * Gets the geo_force property value. Bypass geo-coherence: claim identity_country's geo (timezone + geolocation) REGARDLESS of the exit IP. Requires a pinned identity_country + geo_select tier. Default off (geo follows the exit; forcing may create an IP<->timezone mismatch).
+     * @return bool|null
+    */
+    public function getGeoForce(): ?bool {
+        return $this->geo_force;
     }
 
     /**
@@ -172,6 +187,7 @@ class ContentRequest implements AdditionalDataHolder, Parsable
     public function serialize(SerializationWriter $writer): void {
         $writer->writeEnumValue('engine', $this->getEngine());
         $writer->writeEnumValue('format', $this->getFormat());
+        $writer->writeBooleanValue('geo_force', $this->getGeoForce());
         $writer->writeObjectValue('identity', $this->getIdentity());
         $writer->writeObjectValue('identity_country', $this->getIdentityCountry());
         $writer->writeObjectValue('language', $this->getLanguage());
@@ -203,6 +219,14 @@ class ContentRequest implements AdditionalDataHolder, Parsable
     */
     public function setFormat(?ContentRequest_format $value): void {
         $this->format = $value;
+    }
+
+    /**
+     * Sets the geo_force property value. Bypass geo-coherence: claim identity_country's geo (timezone + geolocation) REGARDLESS of the exit IP. Requires a pinned identity_country + geo_select tier. Default off (geo follows the exit; forcing may create an IP<->timezone mismatch).
+     * @param bool|null $value Value to set for the geo_force property.
+    */
+    public function setGeoForce(?bool $value): void {
+        $this->geo_force = $value;
     }
 
     /**

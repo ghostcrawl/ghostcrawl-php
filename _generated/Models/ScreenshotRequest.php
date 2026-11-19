@@ -28,6 +28,11 @@ class ScreenshotRequest implements AdditionalDataHolder, Parsable
     private ?bool $full_page = null;
     
     /**
+     * @var bool|null $geo_force Bypass geo-coherence: claim identity_country's geo (timezone + geolocation) REGARDLESS of the exit IP. Requires a pinned identity_country + geo_select tier. Default off (geo follows the exit; forcing may create an IP<->timezone mismatch).
+    */
+    private ?bool $geo_force = null;
+    
+    /**
      * @var ScreenshotRequest_identity|null $identity Re-use a persisted identity.
     */
     private ?ScreenshotRequest_identity $identity = null;
@@ -69,6 +74,7 @@ class ScreenshotRequest implements AdditionalDataHolder, Parsable
         $this->setAdditionalData([]);
         $this->setEngine(new ScreenshotRequest_engine('auto'));
         $this->setFullPage(false);
+        $this->setGeoForce(false);
     }
 
     /**
@@ -105,6 +111,7 @@ class ScreenshotRequest implements AdditionalDataHolder, Parsable
         return  [
             'engine' => fn(ParseNode $n) => $o->setEngine($n->getEnumValue(ScreenshotRequest_engine::class)),
             'full_page' => fn(ParseNode $n) => $o->setFullPage($n->getBooleanValue()),
+            'geo_force' => fn(ParseNode $n) => $o->setGeoForce($n->getBooleanValue()),
             'identity' => fn(ParseNode $n) => $o->setIdentity($n->getObjectValue([ScreenshotRequest_identity::class, 'createFromDiscriminatorValue'])),
             'identity_country' => fn(ParseNode $n) => $o->setIdentityCountry($n->getObjectValue([ScreenshotRequest_identity_country::class, 'createFromDiscriminatorValue'])),
             'language' => fn(ParseNode $n) => $o->setLanguage($n->getObjectValue([ScreenshotRequest_language::class, 'createFromDiscriminatorValue'])),
@@ -121,6 +128,14 @@ class ScreenshotRequest implements AdditionalDataHolder, Parsable
     */
     public function getFullPage(): ?bool {
         return $this->full_page;
+    }
+
+    /**
+     * Gets the geo_force property value. Bypass geo-coherence: claim identity_country's geo (timezone + geolocation) REGARDLESS of the exit IP. Requires a pinned identity_country + geo_select tier. Default off (geo follows the exit; forcing may create an IP<->timezone mismatch).
+     * @return bool|null
+    */
+    public function getGeoForce(): ?bool {
+        return $this->geo_force;
     }
 
     /**
@@ -186,6 +201,7 @@ class ScreenshotRequest implements AdditionalDataHolder, Parsable
     public function serialize(SerializationWriter $writer): void {
         $writer->writeEnumValue('engine', $this->getEngine());
         $writer->writeBooleanValue('full_page', $this->getFullPage());
+        $writer->writeBooleanValue('geo_force', $this->getGeoForce());
         $writer->writeObjectValue('identity', $this->getIdentity());
         $writer->writeObjectValue('identity_country', $this->getIdentityCountry());
         $writer->writeObjectValue('language', $this->getLanguage());
@@ -218,6 +234,14 @@ class ScreenshotRequest implements AdditionalDataHolder, Parsable
     */
     public function setFullPage(?bool $value): void {
         $this->full_page = $value;
+    }
+
+    /**
+     * Sets the geo_force property value. Bypass geo-coherence: claim identity_country's geo (timezone + geolocation) REGARDLESS of the exit IP. Requires a pinned identity_country + geo_select tier. Default off (geo follows the exit; forcing may create an IP<->timezone mismatch).
+     * @param bool|null $value Value to set for the geo_force property.
+    */
+    public function setGeoForce(?bool $value): void {
+        $this->geo_force = $value;
     }
 
     /**

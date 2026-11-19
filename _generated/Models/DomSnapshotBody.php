@@ -15,9 +15,14 @@ class DomSnapshotBody implements AdditionalDataHolder, Parsable
     private ?array $additionalData = null;
     
     /**
-     * @var string|null $profile_id The profile_id property
+     * @var DomSnapshotBody_profile_id|null $profile_id The profile_id property
     */
-    private ?string $profile_id = null;
+    private ?DomSnapshotBody_profile_id $profile_id = null;
+    
+    /**
+     * @var string|null $session_id The session_id property
+    */
+    private ?string $session_id = null;
     
     /**
      * Instantiates a new DomSnapshotBody and sets the default values.
@@ -50,16 +55,25 @@ class DomSnapshotBody implements AdditionalDataHolder, Parsable
     public function getFieldDeserializers(): array {
         $o = $this;
         return  [
-            'profile_id' => fn(ParseNode $n) => $o->setProfileId($n->getStringValue()),
+            'profile_id' => fn(ParseNode $n) => $o->setProfileId($n->getObjectValue([DomSnapshotBody_profile_id::class, 'createFromDiscriminatorValue'])),
+            'session_id' => fn(ParseNode $n) => $o->setSessionId($n->getStringValue()),
         ];
     }
 
     /**
      * Gets the profile_id property value. The profile_id property
+     * @return DomSnapshotBody_profile_id|null
+    */
+    public function getProfileId(): ?DomSnapshotBody_profile_id {
+        return $this->profile_id;
+    }
+
+    /**
+     * Gets the session_id property value. The session_id property
      * @return string|null
     */
-    public function getProfileId(): ?string {
-        return $this->profile_id;
+    public function getSessionId(): ?string {
+        return $this->session_id;
     }
 
     /**
@@ -67,7 +81,8 @@ class DomSnapshotBody implements AdditionalDataHolder, Parsable
      * @param SerializationWriter $writer Serialization writer to use to serialize this model
     */
     public function serialize(SerializationWriter $writer): void {
-        $writer->writeStringValue('profile_id', $this->getProfileId());
+        $writer->writeObjectValue('profile_id', $this->getProfileId());
+        $writer->writeStringValue('session_id', $this->getSessionId());
         $writer->writeAdditionalData($this->getAdditionalData());
     }
 
@@ -81,10 +96,18 @@ class DomSnapshotBody implements AdditionalDataHolder, Parsable
 
     /**
      * Sets the profile_id property value. The profile_id property
-     * @param string|null $value Value to set for the profile_id property.
+     * @param DomSnapshotBody_profile_id|null $value Value to set for the profile_id property.
     */
-    public function setProfileId(?string $value): void {
+    public function setProfileId(?DomSnapshotBody_profile_id $value): void {
         $this->profile_id = $value;
+    }
+
+    /**
+     * Sets the session_id property value. The session_id property
+     * @param string|null $value Value to set for the session_id property.
+    */
+    public function setSessionId(?string $value): void {
+        $this->session_id = $value;
     }
 
 }

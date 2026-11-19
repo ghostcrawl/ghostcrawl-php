@@ -32,7 +32,7 @@ class WaitRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Wait for selector / timeout
+     * Wait for a selector (or a timed wait) on the page of a live cloud session. A selector that never appears returns 404 ``selector_not_found``; a plain timed wait returns ``state:"timeout"``.
      * @param WaitBody $body The request body
      * @param WaitRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -49,7 +49,7 @@ class WaitRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Wait for selector / timeout
+     * Wait for a selector (or a timed wait) on the page of a live cloud session. A selector that never appears returns 404 ``selector_not_found``; a plain timed wait returns ``state:"timeout"``.
      * @param WaitBody $body The request body
      * @param WaitRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation

@@ -3,8 +3,8 @@
 namespace GhostCrawl\V1\Profiles\Item;
 
 use Exception;
+use GhostCrawl\Models\Ghostcrawl__api__routes__profiles__ProfileUpdateRequest;
 use GhostCrawl\Models\ProblemDetails;
-use GhostCrawl\Models\ProfileUpdateRequest;
 use Http\Promise\Promise;
 use Microsoft\Kiota\Abstractions\BaseRequestBuilder;
 use Microsoft\Kiota\Abstractions\HttpMethod;
@@ -65,12 +65,12 @@ class WithNameItemRequestBuilder extends BaseRequestBuilder
 
     /**
      * rename and/or rebind storage_state. The identity_id is IMMUTABLE (changing it would silently change the browser identity and break multi-accounting coherence). 404 if absent; 409 on rename collision.
-     * @param ProfileUpdateRequest $body PUT /v1/profiles/{name} body, rename and/or rebind storage_state.
+     * @param Ghostcrawl__api__routes__profiles__ProfileUpdateRequest $body PUT /v1/profiles/{name} body, rename and/or rebind storage_state.
      * @param WithNameItemRequestBuilderPutRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
      * @throws Exception
     */
-    public function put(ProfileUpdateRequest $body, ?WithNameItemRequestBuilderPutRequestConfiguration $requestConfiguration = null): Promise {
+    public function put(Ghostcrawl__api__routes__profiles__ProfileUpdateRequest $body, ?WithNameItemRequestBuilderPutRequestConfiguration $requestConfiguration = null): Promise {
         $requestInfo = $this->toPutRequestInformation($body, $requestConfiguration);
         $errorMappings = [
                 '422' => [ProblemDetails::class, 'createFromDiscriminatorValue'],
@@ -118,11 +118,11 @@ class WithNameItemRequestBuilder extends BaseRequestBuilder
 
     /**
      * rename and/or rebind storage_state. The identity_id is IMMUTABLE (changing it would silently change the browser identity and break multi-accounting coherence). 404 if absent; 409 on rename collision.
-     * @param ProfileUpdateRequest $body PUT /v1/profiles/{name} body, rename and/or rebind storage_state.
+     * @param Ghostcrawl__api__routes__profiles__ProfileUpdateRequest $body PUT /v1/profiles/{name} body, rename and/or rebind storage_state.
      * @param WithNameItemRequestBuilderPutRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation
     */
-    public function toPutRequestInformation(ProfileUpdateRequest $body, ?WithNameItemRequestBuilderPutRequestConfiguration $requestConfiguration = null): RequestInformation {
+    public function toPutRequestInformation(Ghostcrawl__api__routes__profiles__ProfileUpdateRequest $body, ?WithNameItemRequestBuilderPutRequestConfiguration $requestConfiguration = null): RequestInformation {
         $requestInfo = new RequestInformation();
         $requestInfo->urlTemplate = $this->urlTemplate;
         $requestInfo->pathParameters = $this->pathParameters;

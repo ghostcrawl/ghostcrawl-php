@@ -3,7 +3,7 @@
 namespace GhostCrawl\V1\Page\Cookies;
 
 /**
- * Get cookies
+ * Read cookies from the browser context of a live cloud session. Optionally filter by cookie ``name`` and/or ``domain``.
 */
 class CookiesRequestBuilderGetQueryParameters 
 {
@@ -18,21 +18,21 @@ class CookiesRequestBuilderGetQueryParameters
     public ?string $name = null;
     
     /**
-     * @QueryParameter("profile_id")
-     * @var string|null $profileId 
+     * @QueryParameter("session_id")
+     * @var string|null $sessionId 
     */
-    public ?string $profileId = null;
+    public ?string $sessionId = null;
     
     /**
      * Instantiates a new CookiesRequestBuilderGetQueryParameters and sets the default values.
      * @param string|null $domain 
      * @param string|null $name 
-     * @param string|null $profile_id 
+     * @param string|null $session_id 
     */
-    public function __construct(?string $domain = null, ?string $name = null, ?string $profile_id = null) {
+    public function __construct(?string $domain = null, ?string $name = null, ?string $session_id = null) {
         $this->domain = $domain;
         $this->name = $name;
-        $this->profileId = $profile_id;
+        $this->sessionId = $session_id;
     }
 
 }

@@ -15,9 +15,14 @@ class DownloadBody implements AdditionalDataHolder, Parsable
     private ?array $additionalData = null;
     
     /**
-     * @var string|null $profile_id The profile_id property
+     * @var DownloadBody_profile_id|null $profile_id The profile_id property
     */
-    private ?string $profile_id = null;
+    private ?DownloadBody_profile_id $profile_id = null;
+    
+    /**
+     * @var string|null $session_id The session_id property
+    */
+    private ?string $session_id = null;
     
     /**
      * @var string|null $trigger_selector The trigger_selector property
@@ -55,17 +60,26 @@ class DownloadBody implements AdditionalDataHolder, Parsable
     public function getFieldDeserializers(): array {
         $o = $this;
         return  [
-            'profile_id' => fn(ParseNode $n) => $o->setProfileId($n->getStringValue()),
+            'profile_id' => fn(ParseNode $n) => $o->setProfileId($n->getObjectValue([DownloadBody_profile_id::class, 'createFromDiscriminatorValue'])),
+            'session_id' => fn(ParseNode $n) => $o->setSessionId($n->getStringValue()),
             'trigger_selector' => fn(ParseNode $n) => $o->setTriggerSelector($n->getStringValue()),
         ];
     }
 
     /**
      * Gets the profile_id property value. The profile_id property
+     * @return DownloadBody_profile_id|null
+    */
+    public function getProfileId(): ?DownloadBody_profile_id {
+        return $this->profile_id;
+    }
+
+    /**
+     * Gets the session_id property value. The session_id property
      * @return string|null
     */
-    public function getProfileId(): ?string {
-        return $this->profile_id;
+    public function getSessionId(): ?string {
+        return $this->session_id;
     }
 
     /**
@@ -81,7 +95,8 @@ class DownloadBody implements AdditionalDataHolder, Parsable
      * @param SerializationWriter $writer Serialization writer to use to serialize this model
     */
     public function serialize(SerializationWriter $writer): void {
-        $writer->writeStringValue('profile_id', $this->getProfileId());
+        $writer->writeObjectValue('profile_id', $this->getProfileId());
+        $writer->writeStringValue('session_id', $this->getSessionId());
         $writer->writeStringValue('trigger_selector', $this->getTriggerSelector());
         $writer->writeAdditionalData($this->getAdditionalData());
     }
@@ -96,10 +111,18 @@ class DownloadBody implements AdditionalDataHolder, Parsable
 
     /**
      * Sets the profile_id property value. The profile_id property
-     * @param string|null $value Value to set for the profile_id property.
+     * @param DownloadBody_profile_id|null $value Value to set for the profile_id property.
     */
-    public function setProfileId(?string $value): void {
+    public function setProfileId(?DownloadBody_profile_id $value): void {
         $this->profile_id = $value;
+    }
+
+    /**
+     * Sets the session_id property value. The session_id property
+     * @param string|null $value Value to set for the session_id property.
+    */
+    public function setSessionId(?string $value): void {
+        $this->session_id = $value;
     }
 
     /**

@@ -32,7 +32,7 @@ class TakeoverRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * POST /v1/sessions/{id}/takeover with {"action": "mint"} delegates to the token creation logic (same as /takeover_token). {"action": "release"} delegates to the control flag release logic (same as /takeover_release). with an action discriminator, while the underlying REST surface exposes two dedicated sub-paths. Both entry points share identical auth, tier,
+     * Start or release an interactive takeover of a live browser session. Send ``{"action": "mint"}`` to begin a takeover: you receive a short-lived token you can use to open the interactive session and drive it yourself. Send ``{"action": "release"}`` to hand control back and return the session to view-only. Requires a paid plan and ownership of the session.
      * @param TakeoverActionBody $body The request body
      * @param TakeoverRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -49,7 +49,7 @@ class TakeoverRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * POST /v1/sessions/{id}/takeover with {"action": "mint"} delegates to the token creation logic (same as /takeover_token). {"action": "release"} delegates to the control flag release logic (same as /takeover_release). with an action discriminator, while the underlying REST surface exposes two dedicated sub-paths. Both entry points share identical auth, tier,
+     * Start or release an interactive takeover of a live browser session. Send ``{"action": "mint"}`` to begin a takeover: you receive a short-lived token you can use to open the interactive session and drive it yourself. Send ``{"action": "release"}`` to hand control back and return the session to view-only. Requires a paid plan and ownership of the session.
      * @param TakeoverActionBody $body The request body
      * @param TakeoverRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation

@@ -8,7 +8,7 @@ use Microsoft\Kiota\Abstractions\Serialization\ParseNode;
 use Microsoft\Kiota\Abstractions\Serialization\SerializationWriter;
 
 /**
- * POST /v1/extract request body, schema-driven extraction (deterministic) + bring-your-own-model extraction. Two extraction modes: - Deterministic (default, model_provider absent): CSS/regex/keyword extraction. Requires 'schema'. Returns {"url","data","token_estimate"}. - Bring-your-own-model (model_provider present): GhostCrawl fetches and prepares clean Markdown; your connected model performs the semantic extraction (you are not billed for model inference here, only the request quota). Returns {"urls","data","token_estimate"}. Security notes: - The 'schema' field is validated before any fetch (fail-fast input guard). - URLs are validated against private, loopback, and metadata targets before any fetch. - Error responses never echo the schema body, fetched content, or model credentials. - model_provider.api_key is request-scoped only: never persisted, logged, or returned in any response body or error message.
+ * POST /v1/extract request body, schema-driven extraction (deterministic) + bring-your-own-model extraction. Two extraction modes: - Deterministic (default, model_provider absent): native structured-data extraction, reads the schema.org JSON-LD / microdata / Open Graph a page already embeds and fills the schema (no model, no third party); returns whole priced product grids. Requires 'schema'. Returns {"url","data","token_estimate"}. - Bring-your-own-model (model_provider present): GhostCrawl fetches and prepares clean Markdown; your connected model performs the semantic extraction (you are not billed for model inference here, only the request quota). Returns {"urls","data","token_estimate"}. Security notes: - The 'schema' field is validated before any fetch (fail-fast input guard). - URLs are validated against private, loopback, and metadata targets before any fetch. - Error responses never echo the schema body, fetched content, or model credentials. - model_provider.api_key is request-scoped only: never persisted, logged, or returned in any response body or error message.
 */
 class ExtractRequest implements AdditionalDataHolder, Parsable 
 {
@@ -18,7 +18,7 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
     private ?array $additionalData = null;
     
     /**
-     * @var ExtractRequest_behavior_actions|null $behavior_actions BYO behavior: trusted-input actions replayed on the loaded page instead of the built-in human session. Sanitized + bounded server-side (max 256 actions). Available on every tier.
+     * @var ExtractRequest_behavior_actions|null $behavior_actions BYO behavior: trusted-input actions replayed on the loaded page instead of the built-in browser session. Sanitized + bounded server-side (max 256 actions). Available on every tier.
     */
     private ?ExtractRequest_behavior_actions $behavior_actions = null;
     
@@ -26,6 +26,11 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
      * @var ExtractRequest_engine|null $engine Engine override: auto (default) | chrome | firefox | webkit.
     */
     private ?ExtractRequest_engine $engine = null;
+    
+    /**
+     * @var bool|null $geo_force Override geo-coherence: use `identity_country`'s geo (timezone + geolocation) REGARDLESS of the exit IP's country. Requires a pinned `identity_country` (and the geo_select tier). Off by default, the default is IP-coherent geo (the browser identity follows the exit). Forcing may create an IP<->timezone mismatch that some sites cross-check; opt-in at your own risk.
+    */
+    private ?bool $geo_force = null;
     
     /**
      * @var ExtractRequest_identity_country|null $identity_country Optional two-letter country code to pin (geo-filters the exit and derives timezone; tier-gated). Omitted = timezone follows the exit.
@@ -38,7 +43,7 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
     private ?ExtractRequest_language $language = null;
     
     /**
-     * @var ExtractRequest_prompt|null $prompt Free-form extraction instruction for BYO-LLM mode. Allowed without a schema (schema-less prose extraction). Ignored in deterministic mode (model_provider absent).
+     * @var ExtractRequest_prompt|null $prompt Free-form extraction instruction. Requires a connected model: pass it WITH model_provider to run semantic extraction on your own AI/LLM. Sent WITHOUT model_provider it returns 422 model_provider_required (connect your AI/LLM). Allowed without a schema (schema-less prose extraction). GhostCrawl prepares the content; your model does the extraction.
     */
     private ?ExtractRequest_prompt $prompt = null;
     
@@ -58,6 +63,7 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
     public function __construct() {
         $this->setAdditionalData([]);
         $this->setEngine(new ExtractRequest_engine('auto'));
+        $this->setGeoForce(false);
     }
 
     /**
@@ -78,7 +84,7 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Gets the behavior_actions property value. BYO behavior: trusted-input actions replayed on the loaded page instead of the built-in human session. Sanitized + bounded server-side (max 256 actions). Available on every tier.
+     * Gets the behavior_actions property value. BYO behavior: trusted-input actions replayed on the loaded page instead of the built-in browser session. Sanitized + bounded server-side (max 256 actions). Available on every tier.
      * @return ExtractRequest_behavior_actions|null
     */
     public function getBehaviorActions(): ?ExtractRequest_behavior_actions {
@@ -102,12 +108,21 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
         return  [
             'behavior_actions' => fn(ParseNode $n) => $o->setBehaviorActions($n->getObjectValue([ExtractRequest_behavior_actions::class, 'createFromDiscriminatorValue'])),
             'engine' => fn(ParseNode $n) => $o->setEngine($n->getEnumValue(ExtractRequest_engine::class)),
+            'geo_force' => fn(ParseNode $n) => $o->setGeoForce($n->getBooleanValue()),
             'identity_country' => fn(ParseNode $n) => $o->setIdentityCountry($n->getObjectValue([ExtractRequest_identity_country::class, 'createFromDiscriminatorValue'])),
             'language' => fn(ParseNode $n) => $o->setLanguage($n->getObjectValue([ExtractRequest_language::class, 'createFromDiscriminatorValue'])),
             'prompt' => fn(ParseNode $n) => $o->setPrompt($n->getObjectValue([ExtractRequest_prompt::class, 'createFromDiscriminatorValue'])),
             'url' => fn(ParseNode $n) => $o->setUrl($n->getObjectValue([ExtractRequest_url::class, 'createFromDiscriminatorValue'])),
             'urls' => fn(ParseNode $n) => $o->setUrls($n->getObjectValue([ExtractRequest_urls::class, 'createFromDiscriminatorValue'])),
         ];
+    }
+
+    /**
+     * Gets the geo_force property value. Override geo-coherence: use `identity_country`'s geo (timezone + geolocation) REGARDLESS of the exit IP's country. Requires a pinned `identity_country` (and the geo_select tier). Off by default, the default is IP-coherent geo (the browser identity follows the exit). Forcing may create an IP<->timezone mismatch that some sites cross-check; opt-in at your own risk.
+     * @return bool|null
+    */
+    public function getGeoForce(): ?bool {
+        return $this->geo_force;
     }
 
     /**
@@ -127,7 +142,7 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Gets the prompt property value. Free-form extraction instruction for BYO-LLM mode. Allowed without a schema (schema-less prose extraction). Ignored in deterministic mode (model_provider absent).
+     * Gets the prompt property value. Free-form extraction instruction. Requires a connected model: pass it WITH model_provider to run semantic extraction on your own AI/LLM. Sent WITHOUT model_provider it returns 422 model_provider_required (connect your AI/LLM). Allowed without a schema (schema-less prose extraction). GhostCrawl prepares the content; your model does the extraction.
      * @return ExtractRequest_prompt|null
     */
     public function getPrompt(): ?ExtractRequest_prompt {
@@ -157,6 +172,7 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
     public function serialize(SerializationWriter $writer): void {
         $writer->writeObjectValue('behavior_actions', $this->getBehaviorActions());
         $writer->writeEnumValue('engine', $this->getEngine());
+        $writer->writeBooleanValue('geo_force', $this->getGeoForce());
         $writer->writeObjectValue('identity_country', $this->getIdentityCountry());
         $writer->writeObjectValue('language', $this->getLanguage());
         $writer->writeObjectValue('prompt', $this->getPrompt());
@@ -174,7 +190,7 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Sets the behavior_actions property value. BYO behavior: trusted-input actions replayed on the loaded page instead of the built-in human session. Sanitized + bounded server-side (max 256 actions). Available on every tier.
+     * Sets the behavior_actions property value. BYO behavior: trusted-input actions replayed on the loaded page instead of the built-in browser session. Sanitized + bounded server-side (max 256 actions). Available on every tier.
      * @param ExtractRequest_behavior_actions|null $value Value to set for the behavior_actions property.
     */
     public function setBehaviorActions(?ExtractRequest_behavior_actions $value): void {
@@ -187,6 +203,14 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
     */
     public function setEngine(?ExtractRequest_engine $value): void {
         $this->engine = $value;
+    }
+
+    /**
+     * Sets the geo_force property value. Override geo-coherence: use `identity_country`'s geo (timezone + geolocation) REGARDLESS of the exit IP's country. Requires a pinned `identity_country` (and the geo_select tier). Off by default, the default is IP-coherent geo (the browser identity follows the exit). Forcing may create an IP<->timezone mismatch that some sites cross-check; opt-in at your own risk.
+     * @param bool|null $value Value to set for the geo_force property.
+    */
+    public function setGeoForce(?bool $value): void {
+        $this->geo_force = $value;
     }
 
     /**
@@ -206,7 +230,7 @@ class ExtractRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Sets the prompt property value. Free-form extraction instruction for BYO-LLM mode. Allowed without a schema (schema-less prose extraction). Ignored in deterministic mode (model_provider absent).
+     * Sets the prompt property value. Free-form extraction instruction. Requires a connected model: pass it WITH model_provider to run semantic extraction on your own AI/LLM. Sent WITHOUT model_provider it returns 422 model_provider_required (connect your AI/LLM). Allowed without a schema (schema-less prose extraction). GhostCrawl prepares the content; your model does the extraction.
      * @param ExtractRequest_prompt|null $value Value to set for the prompt property.
     */
     public function setPrompt(?ExtractRequest_prompt $value): void {

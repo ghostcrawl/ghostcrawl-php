@@ -23,7 +23,7 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     private ?ScrapeRequest_batch_identity_mode $batch_identity_mode = null;
     
     /**
-     * @var ScrapeRequest_behavior_actions|null $behavior_actions BYO behavior: a list of trusted-input actions replayed on the loaded page instead of the built-in human session. Each item is {"kind":"move","x":int,"y":int} | {"kind":"wheel","x":int,"y":int,"dy":int} | {"kind":"dwell","ms":int}. Sanitized + bounded server-side (max 256 actions). Available on every tier.
+     * @var ScrapeRequest_behavior_actions|null $behavior_actions BYO behavior: a list of trusted-input actions replayed on the loaded page instead of the built-in browser session. Each item is {"kind":"move","x":int,"y":int} | {"kind":"wheel","x":int,"y":int,"dy":int} | {"kind":"dwell","ms":int}. Sanitized + bounded server-side (max 256 actions). Available on every tier.
     */
     private ?ScrapeRequest_behavior_actions $behavior_actions = null;
     
@@ -31,6 +31,11 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
      * @var int|null $chunk_tokens Maximum tokens per markdown chunk. Clamped server-side to [256, 32768] regardless of caller input.
     */
     private ?int $chunk_tokens = null;
+    
+    /**
+     * @var ScrapeRequest_device|null $device Device class for the population identity draw. 'random' (default) = unchanged. The random_* classes restrict which real-population devices may be drawn (weights inside the class unchanged); with engine 'auto' the engine follows the drawn device (iOS -> webkit always, android -> chrome). An engine the class cannot render on -> 422 device_engine_mismatch. Not combinable with identity / profile; identity_spec's operating system must lie inside the class. For a fixed device use profile=<name>. Cloud only: where no population draw runs (self-host / direct egress) a non-random class -> 422 device_unsupported.
+    */
+    private ?ScrapeRequest_device $device = null;
     
     /**
      * @var ScrapeRequest_engine|null $engine Engine override. 'auto' (default): the identity's browser decides the engine. 'chrome'|'firefox'|'webkit': force that engine, enforced only if coherent with the identity (e.g. iOS identities are always webkit); incoherent picks are rejected, never coerced to a hybrid.
@@ -46,6 +51,11 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
      * @var bool|null $full_page When screenshot=true, capture the FULL document height instead of just the visible viewport. Ignored when screenshot_selector is set.
     */
     private ?bool $full_page = null;
+    
+    /**
+     * @var bool|null $geo_force Override geo-coherence: use `identity_country`'s geo (timezone + geolocation) REGARDLESS of the exit IP's country. Requires a pinned `identity_country` (and the geo_select tier). Off by default, the default is IP-coherent geo (the browser identity follows the exit). Forcing may create an IP<->timezone mismatch that some sites cross-check; opt-in at your own risk.
+    */
+    private ?bool $geo_force = null;
     
     /**
      * @var ScrapeRequest_identity|null $identity Previously-persisted identity_id from POST /v1/identity (persist=true).
@@ -124,9 +134,11 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
         $this->setAdditionalData([]);
         $this->setBatchIdentityMode(new ScrapeRequest_batch_identity_mode('persist'));
         $this->setChunkTokens(8192);
+        $this->setDevice(new ScrapeRequest_device('random'));
         $this->setEngine(new ScrapeRequest_engine('auto'));
         $this->setFormat(new ScrapeRequest_format('html'));
         $this->setFullPage(false);
+        $this->setGeoForce(false);
         $this->setIncludeCitations(true);
         $this->setRoutingMode(new ScrapeRequest_routing_mode('auto'));
         $this->setScreenshot(false);
@@ -159,7 +171,7 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Gets the behavior_actions property value. BYO behavior: a list of trusted-input actions replayed on the loaded page instead of the built-in human session. Each item is {"kind":"move","x":int,"y":int} | {"kind":"wheel","x":int,"y":int,"dy":int} | {"kind":"dwell","ms":int}. Sanitized + bounded server-side (max 256 actions). Available on every tier.
+     * Gets the behavior_actions property value. BYO behavior: a list of trusted-input actions replayed on the loaded page instead of the built-in browser session. Each item is {"kind":"move","x":int,"y":int} | {"kind":"wheel","x":int,"y":int,"dy":int} | {"kind":"dwell","ms":int}. Sanitized + bounded server-side (max 256 actions). Available on every tier.
      * @return ScrapeRequest_behavior_actions|null
     */
     public function getBehaviorActions(): ?ScrapeRequest_behavior_actions {
@@ -172,6 +184,14 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     */
     public function getChunkTokens(): ?int {
         return $this->chunk_tokens;
+    }
+
+    /**
+     * Gets the device property value. Device class for the population identity draw. 'random' (default) = unchanged. The random_* classes restrict which real-population devices may be drawn (weights inside the class unchanged); with engine 'auto' the engine follows the drawn device (iOS -> webkit always, android -> chrome). An engine the class cannot render on -> 422 device_engine_mismatch. Not combinable with identity / profile; identity_spec's operating system must lie inside the class. For a fixed device use profile=<name>. Cloud only: where no population draw runs (self-host / direct egress) a non-random class -> 422 device_unsupported.
+     * @return ScrapeRequest_device|null
+    */
+    public function getDevice(): ?ScrapeRequest_device {
+        return $this->device;
     }
 
     /**
@@ -192,9 +212,11 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
             'batch_identity_mode' => fn(ParseNode $n) => $o->setBatchIdentityMode($n->getEnumValue(ScrapeRequest_batch_identity_mode::class)),
             'behavior_actions' => fn(ParseNode $n) => $o->setBehaviorActions($n->getObjectValue([ScrapeRequest_behavior_actions::class, 'createFromDiscriminatorValue'])),
             'chunk_tokens' => fn(ParseNode $n) => $o->setChunkTokens($n->getIntegerValue()),
+            'device' => fn(ParseNode $n) => $o->setDevice($n->getEnumValue(ScrapeRequest_device::class)),
             'engine' => fn(ParseNode $n) => $o->setEngine($n->getEnumValue(ScrapeRequest_engine::class)),
             'format' => fn(ParseNode $n) => $o->setFormat($n->getEnumValue(ScrapeRequest_format::class)),
             'full_page' => fn(ParseNode $n) => $o->setFullPage($n->getBooleanValue()),
+            'geo_force' => fn(ParseNode $n) => $o->setGeoForce($n->getBooleanValue()),
             'identity' => fn(ParseNode $n) => $o->setIdentity($n->getObjectValue([ScrapeRequest_identity::class, 'createFromDiscriminatorValue'])),
             'identity_country' => fn(ParseNode $n) => $o->setIdentityCountry($n->getObjectValue([ScrapeRequest_identity_country::class, 'createFromDiscriminatorValue'])),
             'include_citations' => fn(ParseNode $n) => $o->setIncludeCitations($n->getBooleanValue()),
@@ -226,6 +248,14 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     */
     public function getFullPage(): ?bool {
         return $this->full_page;
+    }
+
+    /**
+     * Gets the geo_force property value. Override geo-coherence: use `identity_country`'s geo (timezone + geolocation) REGARDLESS of the exit IP's country. Requires a pinned `identity_country` (and the geo_select tier). Off by default, the default is IP-coherent geo (the browser identity follows the exit). Forcing may create an IP<->timezone mismatch that some sites cross-check; opt-in at your own risk.
+     * @return bool|null
+    */
+    public function getGeoForce(): ?bool {
+        return $this->geo_force;
     }
 
     /**
@@ -348,9 +378,11 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
         $writer->writeEnumValue('batch_identity_mode', $this->getBatchIdentityMode());
         $writer->writeObjectValue('behavior_actions', $this->getBehaviorActions());
         $writer->writeIntegerValue('chunk_tokens', $this->getChunkTokens());
+        $writer->writeEnumValue('device', $this->getDevice());
         $writer->writeEnumValue('engine', $this->getEngine());
         $writer->writeEnumValue('format', $this->getFormat());
         $writer->writeBooleanValue('full_page', $this->getFullPage());
+        $writer->writeBooleanValue('geo_force', $this->getGeoForce());
         $writer->writeObjectValue('identity', $this->getIdentity());
         $writer->writeObjectValue('identity_country', $this->getIdentityCountry());
         $writer->writeBooleanValue('include_citations', $this->getIncludeCitations());
@@ -385,7 +417,7 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Sets the behavior_actions property value. BYO behavior: a list of trusted-input actions replayed on the loaded page instead of the built-in human session. Each item is {"kind":"move","x":int,"y":int} | {"kind":"wheel","x":int,"y":int,"dy":int} | {"kind":"dwell","ms":int}. Sanitized + bounded server-side (max 256 actions). Available on every tier.
+     * Sets the behavior_actions property value. BYO behavior: a list of trusted-input actions replayed on the loaded page instead of the built-in browser session. Each item is {"kind":"move","x":int,"y":int} | {"kind":"wheel","x":int,"y":int,"dy":int} | {"kind":"dwell","ms":int}. Sanitized + bounded server-side (max 256 actions). Available on every tier.
      * @param ScrapeRequest_behavior_actions|null $value Value to set for the behavior_actions property.
     */
     public function setBehaviorActions(?ScrapeRequest_behavior_actions $value): void {
@@ -398,6 +430,14 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     */
     public function setChunkTokens(?int $value): void {
         $this->chunk_tokens = $value;
+    }
+
+    /**
+     * Sets the device property value. Device class for the population identity draw. 'random' (default) = unchanged. The random_* classes restrict which real-population devices may be drawn (weights inside the class unchanged); with engine 'auto' the engine follows the drawn device (iOS -> webkit always, android -> chrome). An engine the class cannot render on -> 422 device_engine_mismatch. Not combinable with identity / profile; identity_spec's operating system must lie inside the class. For a fixed device use profile=<name>. Cloud only: where no population draw runs (self-host / direct egress) a non-random class -> 422 device_unsupported.
+     * @param ScrapeRequest_device|null $value Value to set for the device property.
+    */
+    public function setDevice(?ScrapeRequest_device $value): void {
+        $this->device = $value;
     }
 
     /**
@@ -422,6 +462,14 @@ class ScrapeRequest implements AdditionalDataHolder, Parsable
     */
     public function setFullPage(?bool $value): void {
         $this->full_page = $value;
+    }
+
+    /**
+     * Sets the geo_force property value. Override geo-coherence: use `identity_country`'s geo (timezone + geolocation) REGARDLESS of the exit IP's country. Requires a pinned `identity_country` (and the geo_select tier). Off by default, the default is IP-coherent geo (the browser identity follows the exit). Forcing may create an IP<->timezone mismatch that some sites cross-check; opt-in at your own risk.
+     * @param bool|null $value Value to set for the geo_force property.
+    */
+    public function setGeoForce(?bool $value): void {
+        $this->geo_force = $value;
     }
 
     /**

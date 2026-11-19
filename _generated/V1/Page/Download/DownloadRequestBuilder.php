@@ -32,7 +32,7 @@ class DownloadRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Trigger and capture a download
+     * Trigger and capture a download on a live session. Clicks the trigger, captures the resulting file and returns its bytes as base64 (inline cap 10 MB; a larger file returns 403 ``too_large``). The captured file is also saved to your Downloads.
      * @param DownloadBody $body The request body
      * @param DownloadRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -49,7 +49,7 @@ class DownloadRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Trigger and capture a download
+     * Trigger and capture a download on a live session. Clicks the trigger, captures the resulting file and returns its bytes as base64 (inline cap 10 MB; a larger file returns 403 ``too_large``). The captured file is also saved to your Downloads.
      * @param DownloadBody $body The request body
      * @param DownloadRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation

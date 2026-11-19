@@ -32,7 +32,7 @@ class UploadRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Upload a file to a file input
+     * Set a file <input> on the page of a live session to caller-supplied bytes. The base64-decoded file is size-capped before it is applied to the input.
      * @param UploadBody $body The request body
      * @param UploadRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -49,7 +49,7 @@ class UploadRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Upload a file to a file input
+     * Set a file <input> on the page of a live session to caller-supplied bytes. The base64-decoded file is size-capped before it is applied to the input.
      * @param UploadBody $body The request body
      * @param UploadRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation

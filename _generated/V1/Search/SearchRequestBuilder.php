@@ -40,7 +40,7 @@ class SearchRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * multi-backend search. Engine selection: ``engine`` body field or ``X-GhostCrawl-Search-Engine`` header. Auth: tenant bearer + customer's search API key via ``X-Provider-Authorization: Bearer <key>`` (never persisted).
+     * multi-backend search. Engine selection: ``engine`` body field or ``X-Ghostcrawl-Search-Engine`` header. Auth: tenant bearer + customer's search API key via ``X-Provider-Authorization: Bearer <key>`` (never persisted).
      * @param SearchRequest $body POST /v1/search request body.
      * @param SearchRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -64,7 +64,7 @@ class SearchRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * multi-backend search. Engine selection: ``engine`` body field or ``X-GhostCrawl-Search-Engine`` header. Auth: tenant bearer + customer's search API key via ``X-Provider-Authorization: Bearer <key>`` (never persisted).
+     * multi-backend search. Engine selection: ``engine`` body field or ``X-Ghostcrawl-Search-Engine`` header. Auth: tenant bearer + customer's search API key via ``X-Provider-Authorization: Bearer <key>`` (never persisted).
      * @param SearchRequest $body POST /v1/search request body.
      * @param SearchRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation

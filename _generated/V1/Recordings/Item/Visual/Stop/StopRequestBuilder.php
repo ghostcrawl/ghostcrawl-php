@@ -3,7 +3,6 @@
 namespace GhostCrawl\V1\Recordings\Item\Visual\Stop;
 
 use Exception;
-use GhostCrawl\Models\AuthContext;
 use GhostCrawl\Models\ProblemDetails;
 use Http\Promise\Promise;
 use Microsoft\Kiota\Abstractions\BaseRequestBuilder;
@@ -33,13 +32,12 @@ class StopRequestBuilder extends BaseRequestBuilder
 
     /**
      * Stop a visual recording and finalize (assemble m3u8 manifest). Returns 200 with manifest_ref.
-     * @param AuthContext $body The request body
      * @param StopRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
      * @throws Exception
     */
-    public function post(AuthContext $body, ?StopRequestBuilderPostRequestConfiguration $requestConfiguration = null): Promise {
-        $requestInfo = $this->toPostRequestInformation($body, $requestConfiguration);
+    public function post(?StopRequestBuilderPostRequestConfiguration $requestConfiguration = null): Promise {
+        $requestInfo = $this->toPostRequestInformation($requestConfiguration);
         $errorMappings = [
                 '422' => [ProblemDetails::class, 'createFromDiscriminatorValue'],
         ];
@@ -50,11 +48,10 @@ class StopRequestBuilder extends BaseRequestBuilder
 
     /**
      * Stop a visual recording and finalize (assemble m3u8 manifest). Returns 200 with manifest_ref.
-     * @param AuthContext $body The request body
      * @param StopRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation
     */
-    public function toPostRequestInformation(AuthContext $body, ?StopRequestBuilderPostRequestConfiguration $requestConfiguration = null): RequestInformation {
+    public function toPostRequestInformation(?StopRequestBuilderPostRequestConfiguration $requestConfiguration = null): RequestInformation {
         $requestInfo = new RequestInformation();
         $requestInfo->urlTemplate = $this->urlTemplate;
         $requestInfo->pathParameters = $this->pathParameters;
@@ -64,7 +61,6 @@ class StopRequestBuilder extends BaseRequestBuilder
             $requestInfo->addRequestOptions(...$requestConfiguration->options);
         }
         $requestInfo->tryAddHeader('Accept', "application/json");
-        $requestInfo->setContentFromParsable($this->requestAdapter, "application/json", $body);
         return $requestInfo;
     }
 

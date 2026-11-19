@@ -15,14 +15,19 @@ class EvalBody implements AdditionalDataHolder, Parsable
     private ?array $additionalData = null;
     
     /**
-     * @var string|null $profile_id The profile_id property
+     * @var EvalBody_profile_id|null $profile_id The profile_id property
     */
-    private ?string $profile_id = null;
+    private ?EvalBody_profile_id $profile_id = null;
     
     /**
      * @var string|null $script The script property
     */
     private ?string $script = null;
+    
+    /**
+     * @var EvalBody_session_id|null $session_id The session_id property
+    */
+    private ?EvalBody_session_id $session_id = null;
     
     /**
      * Instantiates a new EvalBody and sets the default values.
@@ -55,16 +60,17 @@ class EvalBody implements AdditionalDataHolder, Parsable
     public function getFieldDeserializers(): array {
         $o = $this;
         return  [
-            'profile_id' => fn(ParseNode $n) => $o->setProfileId($n->getStringValue()),
+            'profile_id' => fn(ParseNode $n) => $o->setProfileId($n->getObjectValue([EvalBody_profile_id::class, 'createFromDiscriminatorValue'])),
             'script' => fn(ParseNode $n) => $o->setScript($n->getStringValue()),
+            'session_id' => fn(ParseNode $n) => $o->setSessionId($n->getObjectValue([EvalBody_session_id::class, 'createFromDiscriminatorValue'])),
         ];
     }
 
     /**
      * Gets the profile_id property value. The profile_id property
-     * @return string|null
+     * @return EvalBody_profile_id|null
     */
-    public function getProfileId(): ?string {
+    public function getProfileId(): ?EvalBody_profile_id {
         return $this->profile_id;
     }
 
@@ -77,12 +83,21 @@ class EvalBody implements AdditionalDataHolder, Parsable
     }
 
     /**
+     * Gets the session_id property value. The session_id property
+     * @return EvalBody_session_id|null
+    */
+    public function getSessionId(): ?EvalBody_session_id {
+        return $this->session_id;
+    }
+
+    /**
      * Serializes information the current object
      * @param SerializationWriter $writer Serialization writer to use to serialize this model
     */
     public function serialize(SerializationWriter $writer): void {
-        $writer->writeStringValue('profile_id', $this->getProfileId());
+        $writer->writeObjectValue('profile_id', $this->getProfileId());
         $writer->writeStringValue('script', $this->getScript());
+        $writer->writeObjectValue('session_id', $this->getSessionId());
         $writer->writeAdditionalData($this->getAdditionalData());
     }
 
@@ -96,9 +111,9 @@ class EvalBody implements AdditionalDataHolder, Parsable
 
     /**
      * Sets the profile_id property value. The profile_id property
-     * @param string|null $value Value to set for the profile_id property.
+     * @param EvalBody_profile_id|null $value Value to set for the profile_id property.
     */
-    public function setProfileId(?string $value): void {
+    public function setProfileId(?EvalBody_profile_id $value): void {
         $this->profile_id = $value;
     }
 
@@ -108,6 +123,14 @@ class EvalBody implements AdditionalDataHolder, Parsable
     */
     public function setScript(?string $value): void {
         $this->script = $value;
+    }
+
+    /**
+     * Sets the session_id property value. The session_id property
+     * @param EvalBody_session_id|null $value Value to set for the session_id property.
+    */
+    public function setSessionId(?EvalBody_session_id $value): void {
+        $this->session_id = $value;
     }
 
 }

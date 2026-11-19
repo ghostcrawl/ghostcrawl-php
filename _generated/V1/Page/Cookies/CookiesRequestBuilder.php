@@ -33,7 +33,7 @@ class CookiesRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Delete cookies
+     * Delete cookies from the browser context of a live cloud session. With a name/domain/path filter only the matching cookies are removed; without a filter every cookie in the session is cleared.
      * @param CookiesDeleteBody $body The request body
      * @param CookiesRequestBuilderDeleteRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -50,7 +50,7 @@ class CookiesRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Get cookies
+     * Read cookies from the browser context of a live cloud session. Optionally filter by cookie ``name`` and/or ``domain``.
      * @param CookiesRequestBuilderGetRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
      * @throws Exception
@@ -66,7 +66,7 @@ class CookiesRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Set cookies
+     * Add cookies to the browser context of a live cloud session.
      * @param CookiesSetBody $body The request body
      * @param CookiesRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -83,7 +83,7 @@ class CookiesRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Delete cookies
+     * Delete cookies from the browser context of a live cloud session. With a name/domain/path filter only the matching cookies are removed; without a filter every cookie in the session is cleared.
      * @param CookiesDeleteBody $body The request body
      * @param CookiesRequestBuilderDeleteRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation
@@ -103,13 +103,13 @@ class CookiesRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Get cookies
+     * Read cookies from the browser context of a live cloud session. Optionally filter by cookie ``name`` and/or ``domain``.
      * @param CookiesRequestBuilderGetRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation
     */
     public function toGetRequestInformation(?CookiesRequestBuilderGetRequestConfiguration $requestConfiguration = null): RequestInformation {
         $requestInfo = new RequestInformation();
-        $requestInfo->urlTemplate = '{+baseurl}/v1/page/cookies?profile_id={profile_id}{&domain*,name*}';
+        $requestInfo->urlTemplate = '{+baseurl}/v1/page/cookies?session_id={session_id}{&domain*,name*}';
         $requestInfo->pathParameters = $this->pathParameters;
         $requestInfo->httpMethod = HttpMethod::GET;
         if ($requestConfiguration !== null) {
@@ -124,7 +124,7 @@ class CookiesRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Set cookies
+     * Add cookies to the browser context of a live cloud session.
      * @param CookiesSetBody $body The request body
      * @param CookiesRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation

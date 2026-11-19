@@ -23,7 +23,7 @@ class SearchRequest implements AdditionalDataHolder, Parsable
     private ?SearchRequest_country $country = null;
     
     /**
-     * @var SearchRequest_engine|null $engine Search engine to use: 'brave', 'tavily', 'google', 'bing', or 'yandex'. May also be passed via X-GhostCrawl-Search-Engine header.
+     * @var SearchRequest_engine|null $engine Search engine to use: 'brave', 'tavily', 'google', 'bing', or 'yandex'. May also be passed via X-Ghostcrawl-Search-Engine header.
     */
     private ?SearchRequest_engine $engine = null;
     
@@ -81,7 +81,7 @@ class SearchRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Gets the engine property value. Search engine to use: 'brave', 'tavily', 'google', 'bing', or 'yandex'. May also be passed via X-GhostCrawl-Search-Engine header.
+     * Gets the engine property value. Search engine to use: 'brave', 'tavily', 'google', 'bing', or 'yandex'. May also be passed via X-Ghostcrawl-Search-Engine header.
      * @return SearchRequest_engine|null
     */
     public function getEngine(): ?SearchRequest_engine {
@@ -167,7 +167,7 @@ class SearchRequest implements AdditionalDataHolder, Parsable
     }
 
     /**
-     * Sets the engine property value. Search engine to use: 'brave', 'tavily', 'google', 'bing', or 'yandex'. May also be passed via X-GhostCrawl-Search-Engine header.
+     * Sets the engine property value. Search engine to use: 'brave', 'tavily', 'google', 'bing', or 'yandex'. May also be passed via X-Ghostcrawl-Search-Engine header.
      * @param SearchRequest_engine|null $value Value to set for the engine property.
     */
     public function setEngine(?SearchRequest_engine $value): void {

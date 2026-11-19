@@ -10,7 +10,7 @@ use Microsoft\Kiota\Abstractions\Serialization\SerializationWriter;
 /**
  * PUT /v1/profiles/{name} body, rename and/or rebind storage_state.
 */
-class ProfileUpdateRequest implements AdditionalDataHolder, Parsable 
+class Ghostcrawl__api__routes__profiles__ProfileUpdateRequest implements AdditionalDataHolder, Parsable 
 {
     /**
      * @var array<string, mixed>|null $additionalData Stores additional data not described in the OpenAPI description found when deserializing. Can be used for serialization as well.
@@ -18,17 +18,17 @@ class ProfileUpdateRequest implements AdditionalDataHolder, Parsable
     private ?array $additionalData = null;
     
     /**
-     * @var ProfileUpdateRequest_name|null $name New name (rename). Unique per org.
+     * @var Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_name|null $name New name (rename). Unique per org.
     */
-    private ?ProfileUpdateRequest_name $name = null;
+    private ?Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_name $name = null;
     
     /**
-     * @var ProfileUpdateRequest_storage_state_id|null $storage_state_id Rebind storage_state id. Pass null to keep; use empty string '' to clear.
+     * @var Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_960e45a9|null $storage_state_id Rebind storage_state id. Pass null to keep; use empty string '' to clear.
     */
-    private ?ProfileUpdateRequest_storage_state_id $storage_state_id = null;
+    private ?Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_960e45a9 $storage_state_id = null;
     
     /**
-     * Instantiates a new ProfileUpdateRequest and sets the default values.
+     * Instantiates a new Ghostcrawl__api__routes__profiles__ProfileUpdateRequest and sets the default values.
     */
     public function __construct() {
         $this->setAdditionalData([]);
@@ -37,10 +37,10 @@ class ProfileUpdateRequest implements AdditionalDataHolder, Parsable
     /**
      * Creates a new instance of the appropriate class based on discriminator value
      * @param ParseNode $parseNode The parse node to use to read the discriminator value and create the object
-     * @return ProfileUpdateRequest
+     * @return Ghostcrawl__api__routes__profiles__ProfileUpdateRequest
     */
-    public static function createFromDiscriminatorValue(ParseNode $parseNode): ProfileUpdateRequest {
-        return new ProfileUpdateRequest();
+    public static function createFromDiscriminatorValue(ParseNode $parseNode): Ghostcrawl__api__routes__profiles__ProfileUpdateRequest {
+        return new Ghostcrawl__api__routes__profiles__ProfileUpdateRequest();
     }
 
     /**
@@ -58,24 +58,24 @@ class ProfileUpdateRequest implements AdditionalDataHolder, Parsable
     public function getFieldDeserializers(): array {
         $o = $this;
         return  [
-            'name' => fn(ParseNode $n) => $o->setName($n->getObjectValue([ProfileUpdateRequest_name::class, 'createFromDiscriminatorValue'])),
-            'storage_state_id' => fn(ParseNode $n) => $o->setStorageStateId($n->getObjectValue([ProfileUpdateRequest_storage_state_id::class, 'createFromDiscriminatorValue'])),
+            'name' => fn(ParseNode $n) => $o->setName($n->getObjectValue([Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_name::class, 'createFromDiscriminatorValue'])),
+            'storage_state_id' => fn(ParseNode $n) => $o->setStorageStateId($n->getObjectValue([Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_960e45a9::class, 'createFromDiscriminatorValue'])),
         ];
     }
 
     /**
      * Gets the name property value. New name (rename). Unique per org.
-     * @return ProfileUpdateRequest_name|null
+     * @return Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_name|null
     */
-    public function getName(): ?ProfileUpdateRequest_name {
+    public function getName(): ?Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_name {
         return $this->name;
     }
 
     /**
      * Gets the storage_state_id property value. Rebind storage_state id. Pass null to keep; use empty string '' to clear.
-     * @return ProfileUpdateRequest_storage_state_id|null
+     * @return Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_960e45a9|null
     */
-    public function getStorageStateId(): ?ProfileUpdateRequest_storage_state_id {
+    public function getStorageStateId(): ?Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_960e45a9 {
         return $this->storage_state_id;
     }
 
@@ -99,17 +99,17 @@ class ProfileUpdateRequest implements AdditionalDataHolder, Parsable
 
     /**
      * Sets the name property value. New name (rename). Unique per org.
-     * @param ProfileUpdateRequest_name|null $value Value to set for the name property.
+     * @param Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_name|null $value Value to set for the name property.
     */
-    public function setName(?ProfileUpdateRequest_name $value): void {
+    public function setName(?Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_name $value): void {
         $this->name = $value;
     }
 
     /**
      * Sets the storage_state_id property value. Rebind storage_state id. Pass null to keep; use empty string '' to clear.
-     * @param ProfileUpdateRequest_storage_state_id|null $value Value to set for the storage_state_id property.
+     * @param Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_960e45a9|null $value Value to set for the storage_state_id property.
     */
-    public function setStorageStateId(?ProfileUpdateRequest_storage_state_id $value): void {
+    public function setStorageStateId(?Ghostcrawl__api__routes__profiles__ProfileUpdateRequest_960e45a9 $value): void {
         $this->storage_state_id = $value;
     }
 

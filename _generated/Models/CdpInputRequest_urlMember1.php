@@ -7,7 +7,7 @@ use Microsoft\Kiota\Abstractions\Serialization\Parsable;
 use Microsoft\Kiota\Abstractions\Serialization\ParseNode;
 use Microsoft\Kiota\Abstractions\Serialization\SerializationWriter;
 
-class ProfileUpdateRequest_nameMember1 implements AdditionalDataHolder, Parsable 
+class CdpInputRequest_urlMember1 implements AdditionalDataHolder, Parsable 
 {
     /**
      * @var array<string, mixed>|null $additionalData Stores additional data not described in the OpenAPI description found when deserializing. Can be used for serialization as well.
@@ -15,7 +15,7 @@ class ProfileUpdateRequest_nameMember1 implements AdditionalDataHolder, Parsable
     private ?array $additionalData = null;
     
     /**
-     * Instantiates a new ProfileUpdateRequest_nameMember1 and sets the default values.
+     * Instantiates a new CdpInputRequest_urlMember1 and sets the default values.
     */
     public function __construct() {
         $this->setAdditionalData([]);
@@ -24,10 +24,10 @@ class ProfileUpdateRequest_nameMember1 implements AdditionalDataHolder, Parsable
     /**
      * Creates a new instance of the appropriate class based on discriminator value
      * @param ParseNode $parseNode The parse node to use to read the discriminator value and create the object
-     * @return ProfileUpdateRequest_nameMember1
+     * @return CdpInputRequest_urlMember1
     */
-    public static function createFromDiscriminatorValue(ParseNode $parseNode): ProfileUpdateRequest_nameMember1 {
-        return new ProfileUpdateRequest_nameMember1();
+    public static function createFromDiscriminatorValue(ParseNode $parseNode): CdpInputRequest_urlMember1 {
+        return new CdpInputRequest_urlMember1();
     }
 
     /**

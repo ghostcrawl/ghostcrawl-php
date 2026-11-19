@@ -15,14 +15,19 @@ class WaitBody implements AdditionalDataHolder, Parsable
     private ?array $additionalData = null;
     
     /**
-     * @var string|null $profile_id The profile_id property
+     * @var WaitBody_profile_id|null $profile_id The profile_id property
     */
-    private ?string $profile_id = null;
+    private ?WaitBody_profile_id $profile_id = null;
     
     /**
      * @var WaitBody_selector|null $selector The selector property
     */
     private ?WaitBody_selector $selector = null;
+    
+    /**
+     * @var string|null $session_id The session_id property
+    */
+    private ?string $session_id = null;
     
     /**
      * @var int|null $timeout_ms The timeout_ms property
@@ -61,17 +66,18 @@ class WaitBody implements AdditionalDataHolder, Parsable
     public function getFieldDeserializers(): array {
         $o = $this;
         return  [
-            'profile_id' => fn(ParseNode $n) => $o->setProfileId($n->getStringValue()),
+            'profile_id' => fn(ParseNode $n) => $o->setProfileId($n->getObjectValue([WaitBody_profile_id::class, 'createFromDiscriminatorValue'])),
             'selector' => fn(ParseNode $n) => $o->setSelector($n->getObjectValue([WaitBody_selector::class, 'createFromDiscriminatorValue'])),
+            'session_id' => fn(ParseNode $n) => $o->setSessionId($n->getStringValue()),
             'timeout_ms' => fn(ParseNode $n) => $o->setTimeoutMs($n->getIntegerValue()),
         ];
     }
 
     /**
      * Gets the profile_id property value. The profile_id property
-     * @return string|null
+     * @return WaitBody_profile_id|null
     */
-    public function getProfileId(): ?string {
+    public function getProfileId(): ?WaitBody_profile_id {
         return $this->profile_id;
     }
 
@@ -81,6 +87,14 @@ class WaitBody implements AdditionalDataHolder, Parsable
     */
     public function getSelector(): ?WaitBody_selector {
         return $this->selector;
+    }
+
+    /**
+     * Gets the session_id property value. The session_id property
+     * @return string|null
+    */
+    public function getSessionId(): ?string {
+        return $this->session_id;
     }
 
     /**
@@ -96,8 +110,9 @@ class WaitBody implements AdditionalDataHolder, Parsable
      * @param SerializationWriter $writer Serialization writer to use to serialize this model
     */
     public function serialize(SerializationWriter $writer): void {
-        $writer->writeStringValue('profile_id', $this->getProfileId());
+        $writer->writeObjectValue('profile_id', $this->getProfileId());
         $writer->writeObjectValue('selector', $this->getSelector());
+        $writer->writeStringValue('session_id', $this->getSessionId());
         $writer->writeIntegerValue('timeout_ms', $this->getTimeoutMs());
         $writer->writeAdditionalData($this->getAdditionalData());
     }
@@ -112,9 +127,9 @@ class WaitBody implements AdditionalDataHolder, Parsable
 
     /**
      * Sets the profile_id property value. The profile_id property
-     * @param string|null $value Value to set for the profile_id property.
+     * @param WaitBody_profile_id|null $value Value to set for the profile_id property.
     */
-    public function setProfileId(?string $value): void {
+    public function setProfileId(?WaitBody_profile_id $value): void {
         $this->profile_id = $value;
     }
 
@@ -124,6 +139,14 @@ class WaitBody implements AdditionalDataHolder, Parsable
     */
     public function setSelector(?WaitBody_selector $value): void {
         $this->selector = $value;
+    }
+
+    /**
+     * Sets the session_id property value. The session_id property
+     * @param string|null $value Value to set for the session_id property.
+    */
+    public function setSessionId(?string $value): void {
+        $this->session_id = $value;
     }
 
     /**

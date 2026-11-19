@@ -32,7 +32,7 @@ class ScrollRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Scroll page
+     * Scroll the page of a live cloud session. Tier and ownership checks mirror /v1/cdp/input.
      * @param ScrollBody $body The request body
      * @param ScrollRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return Promise<StreamInterface|null>
@@ -49,7 +49,7 @@ class ScrollRequestBuilder extends BaseRequestBuilder
     }
 
     /**
-     * Scroll page
+     * Scroll the page of a live cloud session. Tier and ownership checks mirror /v1/cdp/input.
      * @param ScrollBody $body The request body
      * @param ScrollRequestBuilderPostRequestConfiguration|null $requestConfiguration Configuration for the request such as headers, query parameters, and middleware options.
      * @return RequestInformation
