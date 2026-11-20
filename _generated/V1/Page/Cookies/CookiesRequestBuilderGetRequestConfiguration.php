@@ -28,9 +28,9 @@ class CookiesRequestBuilderGetRequestConfiguration extends BaseRequestConfigurat
 
     /**
      * Instantiates a new CookiesRequestBuilderGetQueryParameters.
-     * @param string|null $domain 
-     * @param string|null $name 
-     * @param string|null $session_id 
+     * @param string|null $domain
+     * @param string|null $name
+     * @param string|null $session_id
      * @return CookiesRequestBuilderGetQueryParameters
     */
     public static function createQueryParameters(?string $domain = null, ?string $name = null, ?string $session_id = null): CookiesRequestBuilderGetQueryParameters {

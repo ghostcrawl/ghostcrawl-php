@@ -9,7 +9,7 @@ use Microsoft\Kiota\Abstractions\Serialization\ParseNode;
 use Microsoft\Kiota\Abstractions\Serialization\SerializationWriter;
 
 /**
- * Wire-public delivery log representation. 13 wire-public fields per webhook_deliveries schema. All fields are operator/integrator-facing, no secret material.
+ * Wire-public delivery log representation. 13 wire-public fields per webhook_deliveries schema.
 */
 class WebhookDeliveryPublic implements AdditionalDataHolder, Parsable 
 {

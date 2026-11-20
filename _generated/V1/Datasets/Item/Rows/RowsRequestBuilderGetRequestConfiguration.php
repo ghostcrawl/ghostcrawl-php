@@ -28,8 +28,8 @@ class RowsRequestBuilderGetRequestConfiguration extends BaseRequestConfiguration
 
     /**
      * Instantiates a new RowsRequestBuilderGetQueryParameters.
-     * @param string|null $cursor 
-     * @param int|null $limit 
+     * @param string|null $cursor
+     * @param int|null $limit
      * @return RowsRequestBuilderGetQueryParameters
     */
     public static function createQueryParameters(?string $cursor = null, ?int $limit = null): RowsRequestBuilderGetQueryParameters {

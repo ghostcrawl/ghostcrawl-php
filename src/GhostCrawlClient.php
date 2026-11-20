@@ -2155,7 +2155,7 @@ class GhostCrawlClient
     private const DEFAULT_BASE_URL = 'https://api.ghostcrawl.io';
 
     /** SDK package version — dev fallback for the branded UA when Composer metadata is absent. */
-    public const VERSION = '2.3.8';
+    public const VERSION = '2.3.9';
 
     /**
      * Default overall request timeout (seconds). Guzzle's own default is 0 =

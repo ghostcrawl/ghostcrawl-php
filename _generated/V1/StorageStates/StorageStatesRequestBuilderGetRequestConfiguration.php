@@ -28,8 +28,8 @@ class StorageStatesRequestBuilderGetRequestConfiguration extends BaseRequestConf
 
     /**
      * Instantiates a new StorageStatesRequestBuilderGetQueryParameters.
-     * @param string|null $cursor 
-     * @param int|null $limit 
+     * @param string|null $cursor
+     * @param int|null $limit
      * @return StorageStatesRequestBuilderGetQueryParameters
     */
     public static function createQueryParameters(?string $cursor = null, ?int $limit = null): StorageStatesRequestBuilderGetQueryParameters {

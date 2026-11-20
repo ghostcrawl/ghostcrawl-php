@@ -8,19 +8,19 @@ namespace GhostCrawl\V1\StorageStates;
 class StorageStatesRequestBuilderGetQueryParameters 
 {
     /**
-     * @var string|null $cursor 
+     * @var string|null $cursor
     */
     public ?string $cursor = null;
     
     /**
-     * @var int|null $limit 
+     * @var int|null $limit
     */
     public ?int $limit = null;
     
     /**
      * Instantiates a new StorageStatesRequestBuilderGetQueryParameters and sets the default values.
-     * @param string|null $cursor 
-     * @param int|null $limit 
+     * @param string|null $cursor
+     * @param int|null $limit
     */
     public function __construct(?string $cursor = null, ?int $limit = null) {
         $this->cursor = $cursor;

@@ -28,8 +28,8 @@ class WithRun_ItemRequestBuilderGetRequestConfiguration extends BaseRequestConfi
 
     /**
      * Instantiates a new WithRun_ItemRequestBuilderGetQueryParameters.
-     * @param int|null $timeout_s 
-     * @param bool|null $wait 
+     * @param int|null $timeout_s
+     * @param bool|null $wait
      * @return WithRun_ItemRequestBuilderGetQueryParameters
     */
     public static function createQueryParameters(?int $timeout_s = null, ?bool $wait = null): WithRun_ItemRequestBuilderGetQueryParameters {

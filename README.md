@@ -5,10 +5,10 @@ Collect web data at scale — scrape, crawl, search, and extract structured data
 
 ## Install
 
-The current release is **2.3.8** (`ghostcrawl/ghostcrawl:2.3.8`):
+The current release is **2.3.9** (`ghostcrawl/ghostcrawl:2.3.9`):
 
 ```bash
-composer require ghostcrawl/ghostcrawl:2.3.8
+composer require ghostcrawl/ghostcrawl:2.3.9
 ```
 
 Requires PHP 8.1+, `ext-curl`, and `ext-json` (both standard in most PHP distributions).

@@ -1,0 +1,13 @@
+# Packaging hygiene (VERIFY-14): keep the published Composer/Packagist archive to
+# only shippable files (src, _generated, LICENSE, README, composer.json). Everything
+# below is dev/CI-only and MUST NOT ship in the distributed package.
+/tests           export-ignore
+/examples        export-ignore
+/vendor          export-ignore
+/phpunit.xml     export-ignore
+/.phpunit.cache  export-ignore
+/composer.lock   export-ignore
+/Makefile        export-ignore
+/.gitignore      export-ignore
+/.gitattributes  export-ignore
+/CHANGELOG.md    export-ignore

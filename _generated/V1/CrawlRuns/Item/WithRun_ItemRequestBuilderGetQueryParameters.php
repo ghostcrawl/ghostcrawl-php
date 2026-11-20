@@ -9,19 +9,19 @@ class WithRun_ItemRequestBuilderGetQueryParameters
 {
     /**
      * @QueryParameter("timeout_s")
-     * @var int|null $timeoutS 
+     * @var int|null $timeoutS
     */
     public ?int $timeoutS = null;
     
     /**
-     * @var bool|null $wait 
+     * @var bool|null $wait
     */
     public ?bool $wait = null;
     
     /**
      * Instantiates a new WithRun_ItemRequestBuilderGetQueryParameters and sets the default values.
-     * @param int|null $timeout_s 
-     * @param bool|null $wait 
+     * @param int|null $timeout_s
+     * @param bool|null $wait
     */
     public function __construct(?int $timeout_s = null, ?bool $wait = null) {
         $this->timeoutS = $timeout_s;

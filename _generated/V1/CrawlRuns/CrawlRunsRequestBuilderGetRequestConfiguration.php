@@ -28,11 +28,11 @@ class CrawlRunsRequestBuilderGetRequestConfiguration extends BaseRequestConfigur
 
     /**
      * Instantiates a new CrawlRunsRequestBuilderGetQueryParameters.
-     * @param string|null $created_at_from 
-     * @param string|null $created_at_to 
-     * @param string|null $cursor 
-     * @param int|null $limit 
-     * @param string|null $tags 
+     * @param string|null $created_at_from
+     * @param string|null $created_at_to
+     * @param string|null $cursor
+     * @param int|null $limit
+     * @param string|null $tags
      * @return CrawlRunsRequestBuilderGetQueryParameters
     */
     public static function createQueryParameters(?string $created_at_from = null, ?string $created_at_to = null, ?string $cursor = null, ?int $limit = null, ?string $tags = null): CrawlRunsRequestBuilderGetQueryParameters {
